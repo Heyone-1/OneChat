@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>OneChat — Speak freely</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root {
+    --bg:#000;
+    --surface:#121212;
+    --surface-2:#1c1c1e;
+    --border:#262626;
+    --text:#fafafa;
+    --muted:#a8a8a8;
+    --blue:#0095f6;
+    --blue-hover:#1877f2;
+    --red:#ed4956;
+    --green:#22c55e;
+    --gradient:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);
+  }
+  html,body { height:100%; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; overflow:hidden; }
+  .app { display:flex; flex-direction:column; height:100vh; max-width:480px; margin:0 auto; background:var(--bg); position:relative; overflow:hidden; }
+
+  .auth-screen {
+    position:fixed; inset:0; background:#000; z-index:500;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px; text-align:center;
+  }
+  .auth-screen.hidden { display:none; }
+  .auth-logo {
+    font-size:38px; font-weight:800; letter-spacing:-1px;
+    background:var(--gradient); -webkit-background-clip:text; background-clip:text;
+    color:transparent; font-style:italic; margin-bottom:8px;
+  }
+  .auth-tagline { font-size:14px; color:var(--muted); margin-bottom:32px; }
+  .auth-form { width:100%; max-width:340px; display:flex; flex-direction:column; gap:12px; }
+  .auth-label { font-size:12px; color:var(--muted); text-align:left; margin-left:4px; font-weight:600; letter-spacing:.3px; text-transform:uppercase; }
+  .auth-input {
+    width:100%; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:12px; padding:14px 16px; color:var(--text); font-size:16px;
+    font-family:inherit; outline:none; transition:border .15s;
+  }
+  .auth-input:focus { border-color:var(--blue); }
+  .auth-input::placeholder { color:#555; }
+  .auth-btn {
+    width:100%; background:var(--blue); color:white; border:none;
+    border-radius:12px; padding:14px; font-size:15px; font-weight:700;
+    cursor:pointer; transition:all .15s; margin-top:8px;
+  }
+  .auth-btn:disabled { background:#1a3a5c; color:#6b8fb0; cursor:not-allowed; }
+  .auth-btn:not(:disabled):active { transform:scale(.98); background:var(--blue-hover); }
+  .auth-hint { font-size:12px; color:var(--muted); margin-top:12px; line-height:1.5; }
+  .auth-error { font-size:13px; color:var(--red); margin-top:4px; min-height:16px; }
+
+  .avatar-preview {
+    width:72px; height:72px; border-radius:50%;
+    background:linear-gradient(45deg,#333,#555); display:flex; align-items:center; justify-content:center;
+    font-size:28px; font-weight:800; color:white; margin:0 auto 16px;
+    box-shadow:0 8px 24px rgba(220,39,67,.3); transition:all .2s;
+  }
+
+  .topbar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; border-bottom:1px solid var(--border);
+    background:var(--bg); z-index:20; flex-shrink:0;
+  }
+  .topbar .logo {
+    font-size:22px; font-weight:700; letter-spacing:-.5px;
+    background:var(--gradient); -webkit-background-clip:text; background-clip:text;
+    color:transparent; font-style:italic;
+  }
+  .topbar .right { display:flex; align-items:center; gap:8px; }
+  .user-chip {
+    display:flex; align-items:center; gap:6px;
+    background:var(--surface-2); border:1px solid var(--border);
+    border-radius:20px; padding:4px 10px 4px 4px;
+  }
+  .user-chip .mini-avatar {
+    width:24px; height:24px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; color:white;
+  }
+  .user-chip .name { font-size:12px; font-weight:600; color:var(--text); }
+  .icon-btn {
+    background:none; border:none; color:var(--text);
+    cursor:pointer; padding:6px; display:flex; align-items:center; justify-content:center;
+  }
+  .icon-btn svg { width:24px; height:24px; stroke:var(--text); stroke-width:1.8; fill:none; }
+  .icon-btn:active { opacity:.6; }
+
+  .compose {
+    display:flex; gap:10px; padding:12px 16px;
+    border-bottom:1px solid var(--border); flex-shrink:0;
+    background:var(--bg);
+  }
+  .compose-avatar {
+    width:36px; height:36px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:14px; color:white; flex-shrink:0;
+  }
+  .compose-body { flex:1; min-width:0; }
+  .compose-input {
+    width:100%; background:transparent; border:none; outline:none;
+    color:var(--text); font-size:15px; font-family:inherit;
+    resize:none; min-height:40px; line-height:1.4; padding-top:8px;
+  }
+  .compose-input::placeholder { color:#555; }
+  .compose-actions {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:4px;
+  }
+  .char-count { font-size:12px; color:var(--muted); }
+  .char-count.warn { color:var(--red); }
+  .post-btn {
+    background:var(--blue); color:white; border:none;
+    border-radius:20px; padding:7px 18px; font-size:13px; font-weight:700;
+    cursor:pointer; opacity:.4; pointer-events:none; transition:opacity .15s;
+  }
+  .post-btn.active { opacity:1; pointer-events:auto; }
+  .post-btn:active { background:var(--blue-hover); }
+
+  .feed {
+    flex:1; overflow-y:auto; overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+  }
+  .feed::-webkit-scrollbar { display:none; }
+
+  .post {
+    padding:14px 16px; border-bottom:1px solid var(--border);
+    display:flex; gap:12px; animation:fadeIn .25s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
+  .post-avatar {
+    width:40px; height:40px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:15px; color:white; flex-shrink:0;
+  }
+  .post-body { flex:1; min-width:0; }
+  .post-header {
+    display:flex; align-items:center; gap:6px; margin-bottom:2px;
+  }
+  .post-username { font-size:14px; font-weight:700; color:var(--text); }
+  .post-time { font-size:12px; color:var(--muted); }
+  .post-text {
+    font-size:15px; line-height:1.45; color:var(--text);
+    word-wrap:break-word; white-space:pre-wrap; margin-bottom:10px;
+    margin-top:2px;
+  }
+  .post-actions {
+    display:flex; gap:24px; align-items:center; margin-top:2px;
+  }
+  .post-action {
+    background:none; border:none; color:var(--muted);
+    font-size:13px; font-weight:600; cursor:pointer;
+    display:flex; align-items:center; gap:6px; padding:2px 0;
+    transition:color .15s;
+  }
+  .post-action svg { width:18px; height:18px; stroke:currentColor; stroke-width:1.8; fill:none; transition:all .15s; }
+  .post-action:active { transform:scale(.95); }
+  .post-action.liked { color:var(--red); }
+  .post-action.liked svg { fill:var(--red); stroke:var(--red); animation:pop .3s ease; }
+  @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.3)} 100%{transform:scale(1)} }
+
+  .empty-feed {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:60px 24px; text-align:center; color:var(--muted);
+    gap:12px;
+  }
+  .empty-feed .big { font-size:48px; opacity:.5; }
+  .empty-feed p { font-size:15px; }
+
+  .loading-feed {
+    display:flex; align-items:center; justify-content:center;
+    padding:60px 24px; color:var(--muted); font-size:14px;
+  }
+
+  .sheet-backdrop {
+    position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:100;
+    opacity:0; pointer-events:none; transition:opacity .25s ease;
+  }
+  .sheet-backdrop.open { opacity:1; pointer-events:auto; }
+  .sheet {
+    position:fixed; left:0; right:0; bottom:0; max-width:480px; margin:0 auto;
+    height:75vh; background:var(--surface); border-radius:20px 20px 0 0;
+    z-index:101; transform:translateY(100%);
+    transition:transform .3s cubic-bezier(.32,.72,0,1);
+    display:flex; flex-direction:column; border-top:1px solid var(--border);
+  }
+  .sheet.open { transform:translateY(0); }
+  .sheet-handle {
+    width:36px; height:4px; background:#555; border-radius:2px;
+    margin:8px auto 4px; flex-shrink:0;
+  }
+  .sheet-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 16px 12px; border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .sheet-header h3 { font-size:15px; font-weight:600; }
+  .sheet-header button {
+    background:none; border:none; color:var(--muted);
+    font-size:22px; cursor:pointer; line-height:1; padding:0 4px;
+  }
+
+  .sheet-origin {
+    padding:10px 16px; border-bottom:1px solid var(--border);
+    display:flex; gap:10px; flex-shrink:0; background:#0f0f0f;
+  }
+  .sheet-origin .post-avatar { width:32px; height:32px; font-size:12px; }
+  .sheet-origin .so-body { flex:1; min-width:0; }
+  .sheet-origin .so-username { font-size:13px; font-weight:700; margin-bottom:2px; }
+  .sheet-origin .so-text {
+    font-size:13px; color:#ccc; line-height:1.4;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+
+  .comments-list {
+    flex:1; overflow-y:auto; padding:12px 16px;
+    display:flex; flex-direction:column; gap:16px;
+  }
+  .comments-list::-webkit-scrollbar { display:none; }
+  .comment {
+    display:flex; gap:10px; animation:fadeIn .25s ease;
+  }
+  .comment-avatar {
+    width:32px; height:32px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:12px; color:white; flex-shrink:0;
+  }
+  .comment-body { flex:1; min-width:0; }
+  .comment-username { font-size:13px; font-weight:700; margin-bottom:2px; }
+  .comment-text { font-size:14px; line-height:1.4; word-wrap:break-word; }
+  .comment-meta { font-size:11px; color:var(--muted); margin-top:4px; }
+  .empty-comments {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:40px 20px; color:var(--muted); text-align:center; gap:8px;
+  }
+  .empty-comments .emoji { font-size:40px; opacity:.6; }
+  .empty-comments p { font-size:14px; }
+
+  .comment-input-bar {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 16px 16px; border-top:1px solid var(--border);
+    flex-shrink:0; background:var(--surface);
+  }
+  .comment-input-bar .input-avatar {
+    width:32px; height:32px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:12px; color:white; flex-shrink:0;
+  }
+  .comment-input {
+    flex:1; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:22px; padding:10px 16px; color:var(--text);
+    font-size:14px; font-family:inherit; outline:none;
+  }
+  .comment-input::placeholder { color:var(--muted); }
+  .comment-input:focus { border-color:#444; }
+  .post-comment-btn {
+    background:none; border:none; color:var(--blue);
+    font-size:14px; font-weight:600; cursor:pointer;
+    padding:6px 4px; flex-shrink:0; opacity:.4; pointer-events:none;
+    transition:opacity .15s;
+  }
+  .post-comment-btn.active { opacity:1; pointer-events:auto; }
+
+  .toast {
+    position:fixed; bottom:40px; left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:#262626; color:white; padding:12px 20px;
+    border-radius:8px; font-size:14px; font-weight:500;
+    opacity:0; pointer-events:none; transition:all .3s ease;
+    z-index:300; max-width:90%; text-align:center;
+    box-shadow:0 4px 20px rgba(0,0,0,.5);
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.error { background:var(--red); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="auth-screen" id="authScreen">
+    <div class="auth-logo">OneChat</div>
+    <div class="auth-tagline">Speak freely. No noise.</div>
+    <div class="avatar-preview" id="avatarPreview">?</div>
+    <div class="auth-form">
+      <div class="auth-label">Pick a username</div>
+      <input type="text" class="auth-input" id="usernameInput" placeholder="e.g. luna.stars" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="auth-error" id="authError"></div>
+      <button class="auth-btn" id="enterBtn" disabled>Enter OneChat</button>
+      <div class="auth-hint">No email. No password. Just a name.<br>Your account is saved in this browser.</div>
+    </div>
+  </div>
+
+  <div id="mainApp" style="display:none; flex-direction:column; height:100%;">
+    <header class="topbar">
+      <span class="logo">OneChat</span>
+      <div class="right">
+        <div class="user-chip">
+          <div class="mini-avatar" id="chipAvatar">U</div>
+          <span class="name" id="chipName">you</span>
+        </div>
+        <button class="icon-btn" id="signOutBtn" title="Sign out" aria-label="Sign out">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="compose">
+      <div class="compose-avatar" id="composeAvatar">U</div>
+      <div class="compose-body">
+        <textarea class="compose-input" id="composeInput" placeholder="What's on your mind?" maxlength="280" rows="1"></textarea>
+        <div class="compose-actions">
+          <span class="char-count" id="charCount">0/280</span>
+          <button class="post-btn" id="postBtn">Post</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="feed" id="feed">
+      <div class="loading-feed">Loading posts...</div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="sheetBackdrop"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <h3>Comments</h3>
+    <button id="closeSheet">✕</button>
+  </div>
+  <div class="sheet-origin" id="sheetOrigin" style="display:none;">
+    <div class="post-avatar" id="soAvatar">U</div>
+    <div class="so-body">
+      <div class="so-username" id="soUsername">@user</div>
+      <div class="so-text" id="soText"></div>
+    </div>
+  </div>
+  <div class="comments-list" id="commentsList"></div>
+  <div class="comment-input-bar">
+    <div class="input-avatar" id="commentInputAvatar">U</div>
+    <input type="text" class="comment-input" id="commentInput" placeholder="Add a comment..." maxlength="280">
+    <button class="post-comment-btn" id="postCommentBtn">Post</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function() {
+  'use strict';
+
+  var SUPABASE_URL = 'https://kefntorxifkvovprigzp.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_CBYWM6RKvQY7q9j7bYAJ3g_-jo6WSBw';
+
+  var supabase = null;
+  try {
+    if (window.supabase && window.supabase.createClient) {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+  } catch (e) { console.error('Supabase init failed:', e); }
+
+  // ===== DOM =====
+  var authScreen = document.getElementById('authScreen');
+  var usernameInput = document.getElementById('usernameInput');
+  var enterBtn = document.getElementById('enterBtn');
+  var authError = document.getElementById('authError');
+  var avatarPreview = document.getElementById('avatarPreview');
+  var mainApp = document.getElementById('mainApp');
+
+  var chipAvatar = document.getElementById('chipAvatar');
+  var chipName = document.getElementById('chipName');
+  var composeAvatar = document.getElementById('composeAvatar');
+  var commentInputAvatar = document.getElementById('commentInputAvatar');
+
+  var composeInput = document.getElementById('composeInput');
+  var charCount = document.getElementById('charCount');
+  var postBtn = document.getElementById('postBtn');
+  var feed = document.getElementById('feed');
+
+  var sheetBackdrop = document.getElementById('sheetBackdrop');
+  var sheet = document.getElementById('sheet');
+  var closeSheet = document.getElementById('closeSheet');
+  var sheetOrigin = document.getElementById('sheetOrigin');
+  var soAvatar = document.getElementById('soAvatar');
+  var soUsername = document.getElementById('soUsername');
+  var soText = document.getElementById('soText');
+  var commentsList = document.getElementById('commentsList');
+  var commentInput = document.getElementById('commentInput');
+  var postCommentBtn = document.getElementById('postCommentBtn');
+
+  var toast = document.getElementById('toast');
+  var signOutBtn = document.getElementById('signOutBtn');
+
+  // ===== State =====
+  var currentUser = null;
+  var currentPost = null;
+  var toastTimer = null;
+
+  var AVATAR_COLORS = ['#f09433','#e6683c','#dc2743','#cc2366','#bc1888','#0095f6','#22c55e','#8b5cf6','#06b6d4','#f59e0b'];
+
+  // ===== Helpers =====
+  function colorFor(name) {
+    var hash = 0;
+    for (var i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+  }
+
+  function avatarHtml(name, size) {
+    var letter = (name || '?').charAt(0).toUpperCase();
+    var color = colorFor(name || '?');
+    var s = size || 40;
+    var fs = Math.round(s * 0.4);
+    return '<div style="width:' + s + 'px;height:' + s + 'px;border-radius:50%;background:' + color +
+      ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:' + fs +
+      'px;color:white;flex-shrink:0;">' + letter + '</div>';
+  }
+
+  function escapeHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s || '';
+    return d.innerHTML;
+  }
+
+  function showToast(msg, isError) {
+    clearTimeout(toastTimer);
+    toast.textContent = msg;
+    toast.classList.toggle('error', !!isError);
+    toast.classList.add('show');
+    toastTimer = setTimeout(function() { toast.classList.remove('show'); }, 2400);
+  }
+
+  function timeAgo(iso) {
+    if (!iso) return 'now';
+    var diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (diff < 60) return 'now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd';
+    return new Date(iso).toLocaleDateString();
+  }
+
+  // ===== AUTH =====
+  function updateAvatarPreview() {
+    var name = usernameInput.value.trim();
+    if (name.length === 0) {
+      avatarPreview.textContent = '?';
+      avatarPreview.style.background = 'linear-gradient(45deg,#333,#555)';
+      enterBtn.disabled = true;
+      return;
+    }
+    avatarPreview.textContent = name.charAt(0).toUpperCase();
+    avatarPreview.style.background = colorFor(name);
+    enterBtn.disabled = name.length < 2;
+  }
+
+  usernameInput.addEventListener('input', function() {
+    this.value = this.value.replace(/[^a-zA-Z0-9._]/g, '');
+    authError.textContent = '';
+    updateAvatarPreview();
+  });
+
+  usernameInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !enterBtn.disabled) enterBtn.click();
+  });
+
+  enterBtn.addEventListener('click', async function() {
+    var name = usernameInput.value.trim();
+    if (name.length < 2) { authError.textContent = 'Username must be at least 2 characters'; return; }
+    if (!supabase) { authError.textContent = 'Connection error. Refresh and try again.'; return; }
+
+    enterBtn.disabled = true;
+    enterBtn.textContent = 'Checking...';
+
+    var check = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('username', name)
+      .maybeSingle();
+
+    if (check.error && check.error.code !== 'PGRST116') {
+      console.error(check.error);
+      authError.textContent = 'Could not check username. Try again.';
+      enterBtn.disabled = false;
+      enterBtn.textContent = 'Enter OneChat';
+      return;
+    }
+
+    if (check.data) {
+      var login = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('username', name)
+        .single();
+
+      if (login.error || !login.data) {
+        authError.textContent = 'Could not sign in. Try again.';
+        enterBtn.disabled = false;
+        enterBtn.textContent = 'Enter OneChat';
+        return;
+      }
+
+      currentUser = { username: login.data.username, color: login.data.color || colorFor(name) };
+      localStorage.setItem('onechat_user', JSON.stringify(currentUser));
+      finishAuth();
+    } else {
+      var color = colorFor(name);
+      var create = await supabase.from('profiles').insert({
+        username: name,
+        color: color
+      }).select().single();
+
+      if (create.error) {
+        console.error(create.error);
+        authError.textContent = 'Could not create account: ' + create.error.message;
+        enterBtn.disabled = false;
+        enterBtn.textContent = 'Enter OneChat';
+        return;
+      }
+
+      currentUser = { username: name, color: color };
+      localStorage.setItem('onechat_user', JSON.stringify(currentUser));
+      finishAuth();
+      showToast('Welcome to OneChat, @' + name + '!');
+    }
+  });
+
+  function finishAuth() {
+    authScreen.classList.add('hidden');
+    mainApp.style.display = 'flex';
+
+    var c = currentUser.color || colorFor(currentUser.username);
+    var letter = currentUser.username.charAt(0).toUpperCase();
+
+    chipAvatar.style.background = c;
+    chipAvatar.textContent = letter;
+    chipName.textContent = '@' + currentUser.username;
+
+    composeAvatar.style.background = c;
+    composeAvatar.textContent = letter;
+
+    commentInputAvatar.style.background = c;
+    commentInputAvatar.textContent = letter;
+
+    loadFeed();
+  }
+
+  signOutBtn.addEventListener('click', function() {
+    if (!confirm('Sign out of @' + currentUser.username + '? Your posts stay.')) return;
+    localStorage.removeItem('onechat_user');
+    currentUser = null;
+    location.reload();
+  });
+
+  // ===== COMPOSE =====
+  function updateCompose() {
+    var text = composeInput.value;
+    var remaining = 280 - text.length;
+    charCount.textContent = text.length + '/280';
+    charCount.classList.toggle('warn', remaining < 20);
+    postBtn.classList.toggle('active', text.trim().length > 0);
+    composeInput.style.height = 'auto';
+    composeInput.style.height = Math.min(composeInput.scrollHeight, 140) + 'px';
+  }
+
+  composeInput.addEventListener('input', updateCompose);
+
+  composeInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey && composeInput.value.trim().length > 0) {
+      e.preventDefault();
+      postBtn.click();
+    }
+  });
+
+  postBtn.addEventListener('click', async function() {
+    var text = composeInput.value.trim();
+    if (!text || !supabase || !currentUser) return;
+
+    postBtn.classList.remove('active');
+    postBtn.textContent = 'Posting...';
+
+    var result = await supabase.from('posts').insert({
+      username: currentUser.username,
+      text: text
+    }).select().single();
+
+    if (result.error) {
+      console.error(result.error);
+      showToast('Could not post: ' + result.error.message, true);
+      postBtn.classList.add('active');
+      postBtn.textContent = 'Post';
+      return;
+    }
+
+    composeInput.value = '';
+    updateCompose();
+    postBtn.textContent = 'Post';
+
+    await loadFeed();
+    showToast('Posted!');
+  });
+
+  // ===== FEED =====
+  async function loadFeed() {
+    if (!supabase) {
+      feed.innerHTML = '<div class="empty-feed"><span class="big">⚠️</span><p>Database not connected.</p></div>';
+      return;
+    }
+
+    var result = await supabase
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (result.error) {
+      console.error(result.error);
+      feed.innerHTML = '<div class="empty-feed"><span class="big">⚠️</span><p>Could not load posts.</p><p style="font-size:12px;opacity:.7">' + escapeHtml(result.error.message) + '</p></div>';
+      return;
+    }
+
+    var posts = result.data || [];
+    if (posts.length === 0) {
+      feed.innerHTML = '<div class="empty-feed"><span class="big">💬</span><p>No posts yet</p><p style="font-size:13px;opacity:.7">Be the first to say something.</p></div>';
+      return;
+    }
+
+    for (var i = 0; i < posts.length; i++) {
+      var p = posts[i];
+
+      var likesRes = await supabase
+        .from('post_likes')
+        .select('username')
+        .eq('post_id', p.id);
+      p._likes = likesRes.data || [];
+      p.liked = p._likes.some(function(l) { return l.username === currentUser.username; });
+      p.likesCount = p._likes.length;
+
+      var commentsRes = await supabase
+        .from('post_comments')
+        .select('*')
+        .eq('post_id', p.id)
+        .order('created_at', { ascending: true });
+      p._comments = commentsRes.data || [];
+    }
+
+    renderFeed(posts);
+  }
+
+  function renderFeed(posts) {
+    feed.innerHTML = '';
+
+    posts.forEach(function(p) {
+      var el = document.createElement('div');
+      el.className = 'post';
+      el.dataset.postId = p.id;
+
+      var likeIcon = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+      var commentIcon = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+
+      el.innerHTML =
+        avatarHtml(p.username, 40) +
+        '<div class="post-body">' +
+          '<div class="post-header">' +
+            '<span class="post-username">@' + escapeHtml(p.username) + '</span>' +
+            '<span class="post-time">· ' + timeAgo(p.created_at) + '</span>' +
+          '</div>' +
+          '<div class="post-text">' + escapeHtml(p.text) + '</div>' +
+          '<div class="post-actions">' +
+            '<button class="post-action like-btn' + (p.liked ? ' liked' : '') + '" data-action="like" data-id="' + p.id + '">' +
+              likeIcon + '<span class="like-count">' + p.likesCount + '</span>' +
+            '</button>' +
+            '<button class="post-action comment-btn" data-action="comment" data-id="' + p.id + '">' +
+              commentIcon + '<span class="comment-count">' + p._comments.length + '</span>' +
+            '</button>' +
+          '</div>' +
+        '</div>';
+
+      feed.appendChild(el);
+    });
+
+    attachFeedEvents(posts);
+  }
+
+  function attachFeedEvents(posts) {
+    feed.onclick = async function(e) {
+      var btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      e.stopPropagation();
+
+      var action = btn.dataset.action;
+      var id = btn.dataset.id;
+      var p = posts.find(function(x) { return String(x.id) === String(id); });
+      if (!p) return;
+
+      if (action === 'like') {
+        await toggleLike(p, btn);
+      } else if (action === 'comment') {
+        openComments(p);
+      }
+    };
+  }
+
+  async function toggleLike(p, btn) {
+    if (!supabase || !currentUser) return;
+
+    if (p.liked) {
+      var del = await supabase
+        .from('post_likes')
+        .delete()
+        .eq('post_id', p.id)
+        .eq('username', currentUser.username);
+      if (del.error) { console.error(del.error); showToast('Could not unlike', true); return; }
+      p.liked = false;
+      p.likesCount = Math.max(0, p.likesCount - 1);
+    } else {
+      var ins = await supabase
+        .from('post_likes')
+        .insert({ post_id: p.id, username: currentUser.username });
+      if (ins.error) { console.error(ins.error); showToast('Could not like', true); return; }
+      p.liked = true;
+      p.likesCount += 1;
+    }
+
+    btn.classList.toggle('liked', p.liked);
+    btn.querySelector('.like-count').textContent = p.likesCount;
+  }
+
+  // ===== COMMENTS =====
+  function openComments(p) {
+    currentPost = p;
+
+    sheetOrigin.style.display = 'flex';
+    soAvatar.outerHTML = avatarHtml(p.username, 32).replace('style="', 'id="soAvatar" style="');
+    soAvatar = document.getElementById('soAvatar');
+    soUsername.textContent = '@' + p.username;
+    soText.textContent = p.text;
+
+    renderComments(p);
+    sheetBackdrop.classList.add('open');
+    sheet.classList.add('open');
+    commentInput.value = '';
+    updatePostCommentBtn();
+  }
+
+  function closeCommentsSheet() {
+    sheetBackdrop.classList.remove('open');
+    sheet.classList.remove('open');
+    currentPost = null;
+  }
+
+  function renderComments(p) {
+    commentsList.innerHTML = '';
+
+    if (!p._comments || p._comments.length === 0) {
+      commentsList.innerHTML = '<div class="empty-comments"><span class="emoji">💬</span><p>No comments yet</p><p style="font-size:12px;opacity:.7">Start the conversation.</p></div>';
+      return;
+    }
+
+    p._comments.forEach(function(c) {
+      var el = document.createElement('div');
+      el.className = 'comment';
+
+      el.innerHTML =
+        avatarHtml(c.username, 32) +
+        '<div class="comment-body">' +
+          '<div class="comment-username">@' + escapeHtml(c.username) + '</div>' +
+          '<div class="comment-text">' + escapeHtml(c.text) + '</div>' +
+          '<div class="comment-meta">' + timeAgo(c.created_at) + '</div>' +
+        '</div>';
+
+      commentsList.appendChild(el);
+    });
+
+    commentsList.scrollTop = commentsList.scrollHeight;
+  }
+
+  function updatePostCommentBtn() {
+    var hasText = commentInput.value.trim().length > 0;
+    postCommentBtn.classList.toggle('active', hasText && !!currentPost);
+  }
+
+  commentInput.addEventListener('input', updatePostCommentBtn);
+  commentInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      postCommentBtn.click();
+    }
+  });
+
+  postCommentBtn.addEventListener('click', async function() {
+    var text = commentInput.value.trim();
+    if (!text || !currentPost || !supabase || !currentUser) return;
+
+    postCommentBtn.classList.remove('active');
+
+    var ins = await supabase.from('post_comments').insert({
+      post_id: currentPost.id,
+      username: currentUser.username,
+      text: text
+    }).select().single();
+
+    if (ins.error) {
+      console.error(ins.error);
+      showToast('Could not comment: ' + ins.error.message, true);
+      postCommentBtn.classList.add('active');
+      return;
+    }
+
+    currentPost._comments.push(ins.data);
+    commentInput.value = '';
+    updatePostCommentBtn();
+    renderComments(currentPost);
+
+    var postEl = feed.querySelector('.post[data-post-id="' + currentPost.id + '"]');
+    if (postEl) {
+      var countEl = postEl.querySelector('.comment-count');
+      if (countEl) countEl.textContent = currentPost._comments.length;
+    }
+
+    showToast('Comment added');
+  });
+
+  closeSheet.addEventListener('click', closeCommentsSheet);
+  sheetBackdrop.addEventListener('click', closeCommentsSheet);
+
+  // ===== INIT =====
+  function init() {
+    var saved = localStorage.getItem('onechat_user');
+    if (saved) {
+      try {
+        currentUser = JSON.parse(saved);
+        finishAuth();
+        return;
+      } catch (e) {
+        localStorage.removeItem('onechat_user');
+      }
+    }
+    updateAvatarPreview();
+    setTimeout(function() { usernameInput.focus(); }, 200);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
