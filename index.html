@@ -122,6 +122,7 @@
   .post { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; gap:12px; animation:fadeIn .25s ease; position:relative; transition:background 0.5s; }
   @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
   .post.highlight { background:rgba(0,149,246,.15); }
+  .post.interested { background: rgba(0,149,246, 0.05); } /* Subtle highlight for interested */
   .post-avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; background:var(--surface-2); cursor:pointer; }
   .post-body { flex:1; min-width:0; }
   .post-header { display:flex; align-items:center; gap:6px; margin-bottom:2px; flex-wrap:wrap; }
@@ -135,19 +136,33 @@
   /* Tag styles */
   .tag-text { color:var(--blue); font-weight:600; text-decoration:none; }
   
-  /* Author / Pinned Tags */
+  /* Badges */
   .badge-tag { font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; display:inline-flex; align-items:center; gap:2px; }
   .badge-author { background:rgba(0,149,246,.15); color:var(--blue); border:1px solid rgba(0,149,246,.3); }
   .badge-pin { background:rgba(245,158,11,.15); color:var(--pin-color); border:1px solid rgba(245,158,11,.3); }
+  .badge-interested { background:rgba(0,149,246,.15); color:var(--blue); border:1px solid rgba(0,149,246,.3); }
 
-  /* Actions moved OUTSIDE the background block */
+  /* Actions */
   .post-actions { display:flex; gap:24px; align-items:center; margin-top:8px; }
   .post-action { background:none; border:none; color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; padding:2px 0; transition:color .15s; }
   .post-action:active { transform:scale(.95); }
   .post-action.liked { color:var(--red); }
-  .post-action.pinned { color:var(--pin-color); }
-  .post-delete-btn { background:none; border:none; color:var(--muted); cursor:pointer; padding:4px; display:flex; align-items:center; margin-left:auto; font-size:14px; }
-  .post-delete-btn:active { color:var(--red); }
+  
+  /* 3 Dots Menu */
+  .post-menu-btn { background:none; border:none; color:var(--muted); cursor:pointer; padding:4px; display:flex; align-items:center; margin-left:auto; font-size:18px; font-weight:bold; letter-spacing:1px; line-height:1; }
+  .post-menu-btn:active { color:var(--text); }
+  
+  /* Inline follow button in feed */
+  .feed-follow-btn { background:none; border:1px solid var(--blue); color:var(--blue); border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; cursor:pointer; margin-left:2px; transition:all .15s; }
+  .feed-follow-btn.following { border-color:var(--border); color:var(--muted); }
+  .feed-follow-btn:active { transform:scale(.95); }
+
+  /* Dropdown Menu */
+  .post-dropdown { position:absolute; top:36px; right:16px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.4); z-index:100; display:none; flex-direction:column; min-width:140px; overflow:hidden; }
+  .post-dropdown.show { display:flex; }
+  .dropdown-item { background:none; border:none; text-align:left; padding:12px 16px; color:var(--text); font-size:13px; font-weight:600; cursor:pointer; transition:background .1s; }
+  .dropdown-item:hover, .dropdown-item:active { background:var(--border); }
+  .dropdown-item.danger { color:var(--red); }
 
   .empty-feed { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 24px; text-align:center; color:var(--muted); gap:12px; }
   .loading-feed { display:flex; align-items:center; justify-content:center; padding:60px 24px; color:var(--muted); font-size:14px; }
@@ -287,7 +302,7 @@
   .msg-status { font-size:10px; letter-spacing:-2px; margin-right:2px; }
   .msg-status.sent { color: rgba(255,255,255,0.6); }
   .msg-status.delivered { color: rgba(255,255,255,0.9); }
-  .msg-status.seen { color: #4ade80; } /* bright green */
+  .msg-status.seen { color: #4ade80; }
   
   .chat-input-bar { 
     display:flex; align-items:center; gap:10px; 
@@ -675,7 +690,7 @@
       
       <div class="faq-item">
         <div class="faq-q">How do I pin a post? <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
-        <div class="faq-a">Tap the 📌 icon on your own post. You can pin up to 4 posts to the top of your profile.</div>
+        <div class="faq-a">Tap the three dots (⋮) on your own post and select "Pin post". You can pin up to 4 posts to the top of your profile.</div>
       </div>
     </div>
   </div>
@@ -1474,7 +1489,6 @@
   async function loadMessages() {
     if (!supabase || !currentConversationId) return;
     
-    // We select is_read and delivered_at which we just added via SQL
     var res = await supabase.from('messages').select('*').eq('conversation_id', currentConversationId).order('created_at', { ascending: true });
     var msgs = res.data || [];
     
@@ -1530,7 +1544,6 @@
     if (!text || !currentConversationId || !currentUser) return;
     chatInput.value = '';
     
-    // Insert with initial status
     await supabase.from('messages').insert({
       conversation_id: currentConversationId,
       sender: currentUser.username,
@@ -1670,6 +1683,11 @@
     var result = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(50);
     if (result.error) { console.error(result.error); return; }
     var posts = result.data || [];
+    
+    // Filter out "Not Interested" posts from local storage
+    var notInterestedIds = JSON.parse(localStorage.getItem('onechat_not_interested') || '[]');
+    posts = posts.filter(function(p) { return !notInterestedIds.includes(String(p.id)); });
+
     if (posts.length === 0) {
       feed.innerHTML = '<div class="empty-feed"><span class="big">💬</span><p>No posts yet</p></div>';
       return;
@@ -1687,9 +1705,14 @@
     var profilesRes = await supabase.from('profiles').select('username, emoji').in('username', Object.keys(usernames));
     var profileMap = {}; (profilesRes.data || []).forEach(function(p) { profileMap[p.username] = p; });
 
+    // Get all my following to show status inline
+    var meFollowRes = await supabase.from('follows').select('following').eq('follower', currentUser.username);
+    var iFollowSet = new Set((meFollowRes.data || []).map(function(f) { return f.following; }));
+
     for (var i = 0; i < posts.length; i++) {
       var p = posts[i];
       p._avatar = (profileMap[p.username] && profileMap[p.username].emoji) || '♥️';
+      p._isFollowing = iFollowSet.has(p.username);
       
       var likesRes = await supabase.from('post_likes').select('username').eq('post_id', p.id);
       p._likes = likesRes.data || [];
@@ -1723,24 +1746,24 @@
     }
   }
 
+  // Local storage for interested posts
+  function isInterested(postId) {
+    var intIds = JSON.parse(localStorage.getItem('onechat_interested') || '[]');
+    return intIds.includes(String(postId));
+  }
+
   function renderFeed(posts) {
     feed.innerHTML = '';
     posts.forEach(function(p) {
       var el = document.createElement('div');
-      el.className = 'post';
+      el.className = 'post' + (isInterested(p.id) ? ' interested' : '');
       el.dataset.postId = p.id;
       
       var isMe = p.username === currentUser.username;
       
-      var pinHtml = '';
-      if (isMe) {
-        pinHtml = '<button class="post-action pin-btn' + (p.is_pinned ? ' pinned' : '') + '" data-action="pin-post" data-id="' + p.id + '" title="Pin post">📌</button>';
-      }
-      
-      var deleteBtn = isMe ? '<button class="post-delete-btn" data-action="delete-post" data-id="' + p.id + '">🗑️</button>' : '';
-
       var authorBadge = '';
       if (p.is_pinned) authorBadge += ' <span class="badge-tag badge-pin">Pinned</span>';
+      if (isInterested(p.id)) authorBadge += ' <span class="badge-tag badge-interested">🔥 Interested</span>';
 
       var bgStyle = p.bg_color ? 'style="background-color:' + p.bg_color + ';"' : '';
 
@@ -1757,14 +1780,27 @@
         if (fanCounts[u] > max) { max = fanCounts[u]; topFan = u; }
       }
 
+      // Follow button for feed
+      var followBtnHtml = '';
+      if (!isMe) {
+        followBtnHtml = '<button class="feed-follow-btn' + (p._isFollowing ? ' following' : '') + '" data-follow-user="' + escapeHtml(p.username) + '">' + (p._isFollowing ? 'Following' : 'Follow') + '</button>';
+      }
+
       el.innerHTML =
         '<div class="post-avatar" data-action="profile" data-target="' + escapeHtml(p.username) + '">' + p._avatar + '</div>' +
         '<div class="post-body">' +
           '<div class="post-header">' +
             '<span class="post-username" data-action="profile" data-target="' + escapeHtml(p.username) + '">' + escapeHtml(p.username) + '</span>' +
+            followBtnHtml +
             authorBadge +
             '<span class="post-time">· ' + timeAgo(p.created_at) + '</span>' +
-            deleteBtn +
+            '<button class="post-menu-btn" data-action="menu" data-id="' + p.id + '">⋮</button>' +
+            '<div class="post-dropdown" id="dropdown-' + p.id + '">' +
+              (isMe ? '<button class="dropdown-item danger" data-action="delete-post" data-id="' + p.id + '">Delete post</button>' : '') +
+              (isMe ? '<button class="dropdown-item" data-action="pin-post" data-id="' + p.id + '">' + (p.is_pinned ? 'Unpin post' : 'Pin post') + '</button>' : '') +
+              '<button class="dropdown-item" data-action="interested" data-id="' + p.id + '">Interested</button>' +
+              '<button class="dropdown-item" data-action="not-interested" data-id="' + p.id + '">Not interested</button>' +
+            '</div>' +
           '</div>' +
           '<div class="post-bg" ' + bgStyle + '>' +
             '<div class="post-text">' + renderFormatted(p.text) + '</div>' +
@@ -1776,17 +1812,48 @@
             '<button class="post-action comment-btn" data-action="comment" data-id="' + p.id + '">' +
               '💬 <span class="comment-count">' + p._comments.length + '</span>' +
             '</button>' +
-            pinHtml +
           '</div>' +
           (topFan ? '<div style="font-size:11px;color:var(--purple);font-weight:700;margin-top:6px;">⭐ Top Fan: @' + escapeHtml(topFan) + '</div>' : '') +
         '</div>';
       feed.appendChild(el);
     });
 
+    // Handle clicks
     feed.onclick = async function(e) {
+      // Handle Follow button click specifically
+      var followBtn = e.target.closest('.feed-follow-btn');
+      if (followBtn) {
+        e.stopPropagation();
+        followBtn.disabled = true;
+        var uname = followBtn.dataset.followUser;
+        var followed = await toggleFollow(uname, followBtn);
+        followBtn.disabled = false;
+        followBtn.textContent = followed ? 'Following' : 'Follow';
+        followBtn.classList.toggle('following', followed);
+        return;
+      }
+
+      // Handle 3 dots menu
+      var menuBtn = e.target.closest('[data-action="menu"]');
+      if (menuBtn) {
+        e.stopPropagation();
+        var dropdown = menuBtn.nextElementSibling;
+        // Close other dropdowns
+        document.querySelectorAll('.post-dropdown.show').forEach(function(d) {
+          if (d !== dropdown) d.classList.remove('show');
+        });
+        dropdown.classList.toggle('show');
+        return;
+      }
+
       var btn = e.target.closest('[data-action]');
-      if (!btn) return;
+      if (!btn) {
+        // Close dropdowns when clicking outside
+        document.querySelectorAll('.post-dropdown.show').forEach(function(d) { d.classList.remove('show'); });
+        return;
+      }
       e.stopPropagation();
+      
       var action = btn.dataset.action;
       var id = btn.dataset.id;
       var target = btn.dataset.target;
@@ -1795,6 +1862,10 @@
       if (action === 'profile') { openProfile(target); return; }
       if (!p) return;
 
+      // Close the dropdown
+      var drp = document.getElementById('dropdown-' + p.id);
+      if (drp) drp.classList.remove('show');
+
       if (action === 'like') await toggleLike(p, btn);
       else if (action === 'comment') openComments(p);
       else if (action === 'delete-post') {
@@ -1802,14 +1873,35 @@
           await supabase.from('posts').delete().eq('id', p.id);
           await loadFeed();
         });
-      } else if (action === 'pin-post') {
+      } 
+      else if (action === 'pin-post') {
         if (p.is_pinned) {
            await supabase.from('posts').update({ is_pinned: false }).eq('id', p.id);
+           showToast('Post unpinned');
         } else {
            var curPinned = posts.filter(function(x){ return x.username === currentUser.username && x.is_pinned; }).length;
            if (curPinned >= 4) { showToast('You can only pin up to 4 posts', true); return; }
            await supabase.from('posts').update({ is_pinned: true }).eq('id', p.id);
+           showToast('Post pinned');
         }
+        await loadFeed();
+      }
+      else if (action === 'interested') {
+        var intIds = JSON.parse(localStorage.getItem('onechat_interested') || '[]');
+        if (!intIds.includes(String(p.id))) {
+          intIds.push(String(p.id));
+          localStorage.setItem('onechat_interested', JSON.stringify(intIds));
+        }
+        showToast('Marked as Interested 🔥');
+        await loadFeed();
+      }
+      else if (action === 'not-interested') {
+        var notIds = JSON.parse(localStorage.getItem('onechat_not_interested') || '[]');
+        if (!notIds.includes(String(p.id))) {
+          notIds.push(String(p.id));
+          localStorage.setItem('onechat_not_interested', JSON.stringify(notIds));
+        }
+        showToast('Post hidden');
         await loadFeed();
       }
     };
@@ -2255,7 +2347,11 @@
       var p = res.data || { emoji: '♥️' };
       profileEmoji.textContent = p.emoji;
       profileRealName.textContent = p.name || '';
-      profileMeta.textContent = [p.country, p.gender].filter(Boolean).join(' · ');
+      // REMOVED GENDER EMOJI - Just show country (and gender text without symbol)
+      var metaParts = [];
+      if (p.country) metaParts.push(p.country);
+      if (p.gender) metaParts.push(p.gender);
+      profileMeta.textContent = metaParts.join(' · ');
     });
 
     var online = await isUserOnline(username);
