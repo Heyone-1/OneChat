@@ -445,6 +445,8 @@
     <div class="auth-form">
       <div class="auth-label">Username</div>
       <input type="text" class="auth-input" id="loginUsername" placeholder="your username" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="auth-label">Password</div>
+      <input type="password" class="auth-input" id="loginPassword" placeholder="your password" autocomplete="off">
       <div class="auth-error" id="loginError"></div>
       <button class="auth-btn" id="loginBtn" disabled>Log in</button>
       <div class="auth-switch">New here? <a id="goRegister">Create account</a></div>
@@ -460,6 +462,8 @@
       <div class="emoji-row" id="regEmojiRow"></div>
       <div class="auth-label">Username</div>
       <input type="text" class="auth-input" id="regUsername" placeholder="e.g. luna.stars" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="auth-label">Password</div>
+      <input type="password" class="auth-input" id="regPassword" placeholder="Create a password" autocomplete="off">
       <div class="auth-label">Your name</div>
       <input type="text" class="auth-input" id="regName" placeholder="e.g. Luna" maxlength="40" autocomplete="off">
       <div class="auth-label">Country</div>
@@ -881,11 +885,13 @@
   var loginScreen = document.getElementById('loginScreen');
   var registerScreen = document.getElementById('registerScreen');
   var loginUsername = document.getElementById('loginUsername');
+  var loginPassword = document.getElementById('loginPassword');
   var loginBtn = document.getElementById('loginBtn');
   var loginError = document.getElementById('loginError');
   var goRegister = document.getElementById('goRegister');
   var goLogin = document.getElementById('goLogin');
   var regUsername = document.getElementById('regUsername');
+  var regPassword = document.getElementById('regPassword');
   var regName = document.getElementById('regName');
   var regCountry = document.getElementById('regCountry');
   var regGender = document.getElementById('regGender');
@@ -2652,30 +2658,49 @@
     fetchAllUsers(); 
   }
 
+  // LOGIN LOGIC
   loginUsername.addEventListener('input', function() {
     this.value = this.value.replace(/[^a-zA-Z0-9._]/g, '');
     loginError.textContent = '';
-    loginBtn.disabled = this.value.trim().length < 2;
+    loginBtn.disabled = this.value.trim().length < 2 || loginPassword.value.length < 4;
+  });
+  loginPassword.addEventListener('input', function() {
+    loginError.textContent = '';
+    loginBtn.disabled = loginUsername.value.trim().length < 2 || this.value.length < 4;
   });
   loginUsername.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !loginBtn.disabled) loginBtn.click(); });
+  loginPassword.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !loginBtn.disabled) loginBtn.click(); });
+  
   loginBtn.addEventListener('click', async function() {
     var name = loginUsername.value.trim();
-    if (name.length < 2) return;
+    var pass = loginPassword.value;
+    if (name.length < 2 || pass.length < 4) return;
     if (!supabase) { loginError.textContent = 'Connection error.'; return; }
     loginBtn.disabled = true; loginBtn.textContent = 'Logging in...';
+    
     var res = await supabase.from('profiles').select('*').eq('username', name).maybeSingle();
     if (res.error) { loginError.textContent = 'Could not log in.'; loginBtn.disabled = false; loginBtn.textContent = 'Log in'; return; }
     if (!res.data) { loginError.textContent = 'No account with that username.'; loginBtn.disabled = false; loginBtn.textContent = 'Log in'; return; }
+    
+    // CHECK PASSWORD
+    if (res.data.password !== pass) {
+      loginError.textContent = 'Incorrect password.';
+      loginBtn.disabled = false; loginBtn.textContent = 'Log in'; return;
+    }
+
     currentUser = { username: res.data.username, avatar: res.data.emoji || '♥️', name: res.data.name || '', country: res.data.country || '', gender: res.data.gender || '' };
     localStorage.setItem('onechat_user', JSON.stringify(currentUser));
+    loginBtn.textContent = 'Log in';
     finishAuth();
   });
 
+  // REGISTER LOGIC
   function updateRegBtn() {
-    var ok = regUsername.value.trim().length >= 2 && regName.value.trim().length >= 1 && regCountry.value && regGender.value;
+    var ok = regUsername.value.trim().length >= 2 && regPassword.value.length >= 4 && regName.value.trim().length >= 1 && regCountry.value && regGender.value;
     registerBtn.disabled = !ok;
   }
   regUsername.addEventListener('input', function() { this.value = this.value.replace(/[^a-zA-Z0-9._]/g, ''); regError.textContent = ''; updateRegBtn(); });
+  regPassword.addEventListener('input', function() { regError.textContent = ''; updateRegBtn(); });
   regName.addEventListener('input', function() { regError.textContent = ''; updateRegBtn(); });
   regCountry.addEventListener('change', function() { regError.textContent = ''; updateRegBtn(); });
   regGender.addEventListener('change', function() { regError.textContent = ''; updateRegBtn(); });
@@ -2683,17 +2708,22 @@
   regAvatarPreview.textContent = selectedEmoji;
 
   registerBtn.addEventListener('click', async function() {
-    var username = regUsername.value.trim(), name = regName.value.trim(), country = regCountry.value, gender = regGender.value;
-    if (!username || !name || !country || !gender) { regError.textContent = 'Please fill in all fields'; return; }
+    var username = regUsername.value.trim(), password = regPassword.value, name = regName.value.trim(), country = regCountry.value, gender = regGender.value;
+    if (!username || !password || !name || !country || !gender) { regError.textContent = 'Please fill in all fields'; return; }
+    if (password.length < 4) { regError.textContent = 'Password must be at least 4 characters'; return; }
     if (!supabase) { regError.textContent = 'Connection error.'; return; }
     registerBtn.disabled = true; registerBtn.textContent = 'Checking...';
+    
     var check = await supabase.from('profiles').select('username').eq('username', username).maybeSingle();
     if (check.error && check.error.code !== 'PGRST116') { regError.textContent = 'Could not check username.'; registerBtn.disabled = false; registerBtn.textContent = 'Create account'; return; }
     if (check.data) { regError.textContent = 'Username already taken.'; registerBtn.disabled = false; registerBtn.textContent = 'Create account'; return; }
-    var ins = await supabase.from('profiles').insert({ username: username, emoji: selectedEmoji, name: name, country: country, gender: gender }).select().single();
+    
+    var ins = await supabase.from('profiles').insert({ username: username, password: password, emoji: selectedEmoji, name: name, country: country, gender: gender }).select().single();
     if (ins.error) { regError.textContent = 'Could not create account: ' + ins.error.message; registerBtn.disabled = false; registerBtn.textContent = 'Create account'; return; }
+    
     currentUser = { username: username, avatar: selectedEmoji, name: name, country: country, gender: gender };
     localStorage.setItem('onechat_user', JSON.stringify(currentUser));
+    registerBtn.textContent = 'Create account';
     finishAuth();
     showToast('Welcome to OneChat, ' + username + '!');
   });
