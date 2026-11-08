@@ -7,306 +7,326 @@
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   :root {
-    --bg:#000;
-    --surface:#121212;
-    --surface-2:#1c1c1e;
-    --border:#262626;
-    --text:#fafafa;
-    --muted:#a8a8a8;
-    --blue:#0095f6;
-    --blue-hover:#1877f2;
-    --red:#ed4956;
-    --green:#22c55e;
-    --gradient:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);
+    --bg:#000; --surface:#121212; --surface-2:#1c1c1e; --border:#262626;
+    --text:#fafafa; --muted:#a8a8a8; --blue:#0095f6; --blue-hover:#1877f2;
+    --red:#ed4956; --green:#22c55e; --pin-color:#f59e0b;
+    --logo-gradient:linear-gradient(90deg,#00f2fe,#4facfe,#a855f7,#ec4899);
   }
   html,body { height:100%; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; overflow:hidden; }
   .app { display:flex; flex-direction:column; height:100vh; max-width:480px; margin:0 auto; background:var(--bg); position:relative; overflow:hidden; }
 
-  .auth-screen {
-    position:fixed; inset:0; background:#000; z-index:500;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:24px; text-align:center;
-  }
+  /* ===== Auth ===== */
+  .auth-screen { position:fixed; inset:0; background:#000; z-index:500; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:32px 24px; text-align:center; overflow-y:auto; }
   .auth-screen.hidden { display:none; }
-  .auth-logo {
-    font-size:38px; font-weight:800; letter-spacing:-1px;
-    background:var(--gradient); -webkit-background-clip:text; background-clip:text;
-    color:transparent; font-style:italic; margin-bottom:8px;
-  }
-  .auth-tagline { font-size:14px; color:var(--muted); margin-bottom:32px; }
-  .auth-form { width:100%; max-width:340px; display:flex; flex-direction:column; gap:12px; }
+  .auth-screen::-webkit-scrollbar { display:none; }
+  .auth-logo { font-size:38px; font-weight:800; letter-spacing:-1px; background:var(--logo-gradient); -webkit-background-clip:text; background-clip:text; color:transparent; font-style:italic; margin-bottom:8px; margin-top:20px; }
+  .auth-tagline { font-size:14px; color:var(--muted); margin-bottom:24px; }
+  .auth-form { width:100%; max-width:340px; display:flex; flex-direction:column; gap:10px; }
   .auth-label { font-size:12px; color:var(--muted); text-align:left; margin-left:4px; font-weight:600; letter-spacing:.3px; text-transform:uppercase; }
-  .auth-input {
-    width:100%; background:var(--surface-2); border:1px solid var(--border);
-    border-radius:12px; padding:14px 16px; color:var(--text); font-size:16px;
-    font-family:inherit; outline:none; transition:border .15s;
-  }
+  .auth-input { width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; color:var(--text); font-size:16px; font-family:inherit; outline:none; transition:border .15s; }
   .auth-input:focus { border-color:var(--blue); }
   .auth-input::placeholder { color:#555; }
-  .auth-btn {
-    width:100%; background:var(--blue); color:white; border:none;
-    border-radius:12px; padding:14px; font-size:15px; font-weight:700;
-    cursor:pointer; transition:all .15s; margin-top:8px;
-  }
+  .auth-select { width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; color:var(--text); font-size:16px; font-family:inherit; outline:none; cursor:pointer; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a8a8a8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 16px center; }
+  .auth-select:focus { border-color:var(--blue); }
+  .auth-select option { background:#1c1c1e; color:#fafafa; }
+  .auth-btn { width:100%; background:var(--blue); color:white; border:none; border-radius:12px; padding:14px; font-size:15px; font-weight:700; cursor:pointer; transition:all .15s; margin-top:8px; }
   .auth-btn:disabled { background:#1a3a5c; color:#6b8fb0; cursor:not-allowed; }
   .auth-btn:not(:disabled):active { transform:scale(.98); background:var(--blue-hover); }
+  .auth-btn.secondary { background:none; border:1px solid var(--border); color:var(--text); }
   .auth-hint { font-size:12px; color:var(--muted); margin-top:12px; line-height:1.5; }
+  .auth-switch { font-size:13px; color:var(--muted); margin-top:16px; }
+  .auth-switch a { color:var(--blue); text-decoration:none; cursor:pointer; font-weight:600; }
   .auth-error { font-size:13px; color:var(--red); margin-top:4px; min-height:16px; }
+  .avatar-preview { width:72px; height:72px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:34px; margin:0 auto 16px; transition:all .2s; border:2px solid var(--border); }
+  .emoji-row { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin:4px 0 8px; }
+  .emoji-opt { width:40px; height:40px; border-radius:10px; background:var(--surface-2); border:2px solid transparent; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; transition:all .15s; user-select:none; }
+  .emoji-opt:hover { background:#2a2a2c; }
+  .emoji-opt.selected { border-color:var(--blue); background:rgba(0,149,246,.15); }
 
-  .avatar-preview {
-    width:72px; height:72px; border-radius:50%;
-    background:linear-gradient(45deg,#333,#555); display:flex; align-items:center; justify-content:center;
-    font-size:28px; font-weight:800; color:white; margin:0 auto 16px;
-    box-shadow:0 8px 24px rgba(220,39,67,.3); transition:all .2s;
-  }
-
-  .topbar {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:12px 16px; border-bottom:1px solid var(--border);
-    background:var(--bg); z-index:20; flex-shrink:0;
-  }
-  .topbar .logo {
-    font-size:22px; font-weight:700; letter-spacing:-.5px;
-    background:var(--gradient); -webkit-background-clip:text; background-clip:text;
-    color:transparent; font-style:italic;
-  }
-  .topbar .right { display:flex; align-items:center; gap:8px; }
-  .user-chip {
-    display:flex; align-items:center; gap:6px;
-    background:var(--surface-2); border:1px solid var(--border);
-    border-radius:20px; padding:4px 10px 4px 4px;
-  }
-  .user-chip .mini-avatar {
-    width:24px; height:24px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    font-size:11px; font-weight:700; color:white;
-  }
+  /* ===== Top bar ===== */
+  .topbar { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--border); background:var(--bg); z-index:20; flex-shrink:0; }
+  .topbar .logo { font-size:22px; font-weight:700; letter-spacing:-.5px; background:var(--logo-gradient); -webkit-background-clip:text; background-clip:text; color:transparent; font-style:italic; }
+  .topbar .right { display:flex; align-items:center; gap:4px; }
+  .user-chip { display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:20px; padding:4px 10px 4px 4px; cursor:pointer; }
+  .user-chip .mini-avatar { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; }
   .user-chip .name { font-size:12px; font-weight:600; color:var(--text); }
-  .icon-btn {
-    background:none; border:none; color:var(--text);
-    cursor:pointer; padding:6px; display:flex; align-items:center; justify-content:center;
-  }
+  .icon-btn { background:none; border:none; color:var(--text); cursor:pointer; padding:6px; display:flex; align-items:center; justify-content:center; position:relative; }
   .icon-btn svg { width:24px; height:24px; stroke:var(--text); stroke-width:1.8; fill:none; }
   .icon-btn:active { opacity:.6; }
+  .notif-badge { position:absolute; top:2px; right:2px; background:var(--red); color:white; font-size:9px; font-weight:800; min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 4px; border:1.5px solid var(--bg); }
 
-  .compose {
-    display:flex; gap:10px; padding:12px 16px;
-    border-bottom:1px solid var(--border); flex-shrink:0;
-    background:var(--bg);
-  }
-  .compose-avatar {
-    width:36px; height:36px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    font-weight:700; font-size:14px; color:white; flex-shrink:0;
-  }
+  /* ===== Compose ===== */
+  .compose { display:flex; gap:10px; padding:12px 16px; border-bottom:1px solid var(--border); flex-shrink:0; background:var(--bg); position:relative; z-index:50; }
+  .compose-avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; background:var(--surface-2); }
   .compose-body { flex:1; min-width:0; }
-  .compose-input {
-    width:100%; background:transparent; border:none; outline:none;
-    color:var(--text); font-size:15px; font-family:inherit;
-    resize:none; min-height:40px; line-height:1.4; padding-top:8px;
-  }
-  .compose-input::placeholder { color:#555; }
-  .compose-actions {
-    display:flex; justify-content:space-between; align-items:center;
-    margin-top:4px;
-  }
+  .compose-input { width:100%; background:transparent; border:none; outline:none; color:var(--text); font-size:15px; font-family:inherit; resize:none; min-height:40px; line-height:1.4; padding-top:8px; word-wrap:break-word; overflow-wrap:break-word; }
+  .compose-input:empty::before { content: attr(data-placeholder); color: #555; pointer-events: none; display: block; }
+  .compose-actions { display:flex; justify-content:space-between; align-items:center; margin-top:4px; gap:8px; }
   .char-count { font-size:12px; color:var(--muted); }
   .char-count.warn { color:var(--red); }
-  .post-btn {
-    background:var(--blue); color:white; border:none;
-    border-radius:20px; padding:7px 18px; font-size:13px; font-weight:700;
-    cursor:pointer; opacity:.4; pointer-events:none; transition:opacity .15s;
-  }
+  .post-btn { background:var(--blue); color:white; border:none; border-radius:20px; padding:7px 18px; font-size:13px; font-weight:700; cursor:pointer; opacity:.4; pointer-events:none; transition:opacity .15s; }
   .post-btn.active { opacity:1; pointer-events:auto; }
   .post-btn:active { background:var(--blue-hover); }
 
-  .feed {
-    flex:1; overflow-y:auto; overflow-x:hidden;
-    -webkit-overflow-scrolling:touch;
-  }
+  /* Format Bar */
+  .format-bar { display:flex; gap:4px; align-items:center; margin-top:6px; padding:6px 0 2px; border-top:1px solid var(--border); }
+  .fmt-btn { background:var(--surface-2); border:1px solid var(--border); color:var(--text); cursor:pointer; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; transition:all .15s; }
+  .fmt-btn:active { transform:scale(.92); }
+  .fmt-btn.active { background:var(--blue); border-color:var(--blue); color:white; }
+
+  /* Tag Suggestions Popup */
+  .tag-popup { position:absolute; bottom:80px; left:16px; right:16px; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.8); z-index:100; max-height:180px; overflow-y:auto; display:none; }
+  .tag-popup.show { display:block; }
+  .tag-item { padding:10px 14px; font-size:14px; color:var(--text); cursor:pointer; display:flex; align-items:center; gap:8px; }
+  .tag-item:hover, .tag-item:active { background:var(--surface-2); }
+
+  /* ===== Feed ===== */
+  .feed { flex:1; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; }
   .feed::-webkit-scrollbar { display:none; }
-
-  .post {
-    padding:14px 16px; border-bottom:1px solid var(--border);
-    display:flex; gap:12px; animation:fadeIn .25s ease;
-  }
+  .post { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; gap:12px; animation:fadeIn .25s ease; position:relative; transition:background 0.5s; }
   @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
-
-  .post-avatar {
-    width:40px; height:40px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    font-weight:700; font-size:15px; color:white; flex-shrink:0;
-  }
+  .post.highlight { background:rgba(0,149,246,.15); }
+  .post-avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; background:var(--surface-2); cursor:pointer; }
   .post-body { flex:1; min-width:0; }
-  .post-header {
-    display:flex; align-items:center; gap:6px; margin-bottom:2px;
-  }
-  .post-username { font-size:14px; font-weight:700; color:var(--text); }
+  .post-header { display:flex; align-items:center; gap:6px; margin-bottom:2px; flex-wrap:wrap; }
+  .post-username { font-size:14px; font-weight:700; color:var(--text); cursor:pointer; }
   .post-time { font-size:12px; color:var(--muted); }
-  .post-text {
-    font-size:15px; line-height:1.45; color:var(--text);
-    word-wrap:break-word; white-space:pre-wrap; margin-bottom:10px;
-    margin-top:2px;
-  }
-  .post-actions {
-    display:flex; gap:24px; align-items:center; margin-top:2px;
-  }
-  .post-action {
-    background:none; border:none; color:var(--muted);
-    font-size:13px; font-weight:600; cursor:pointer;
-    display:flex; align-items:center; gap:6px; padding:2px 0;
-    transition:color .15s;
-  }
-  .post-action svg { width:18px; height:18px; stroke:currentColor; stroke-width:1.8; fill:none; transition:all .15s; }
+  .post-text { font-size:15px; line-height:1.45; color:var(--text); word-wrap:break-word; white-space:pre-wrap; margin-bottom:10px; margin-top:2px; }
+  
+  /* Tag styles */
+  .tag-text { color:var(--blue); font-weight:600; text-decoration:none; }
+  
+  /* Author / Pinned Tags */
+  .badge-tag { font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; display:inline-flex; align-items:center; gap:2px; }
+  .badge-author { background:rgba(0,149,246,.15); color:var(--blue); border:1px solid rgba(0,149,246,.3); }
+  .badge-pin { background:rgba(245,158,11,.15); color:var(--pin-color); border:1px solid rgba(245,158,11,.3); }
+
+  .post-actions { display:flex; gap:24px; align-items:center; margin-top:2px; }
+  .post-action { background:none; border:none; color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; padding:2px 0; transition:color .15s; }
   .post-action:active { transform:scale(.95); }
   .post-action.liked { color:var(--red); }
-  .post-action.liked svg { fill:var(--red); stroke:var(--red); animation:pop .3s ease; }
-  @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.3)} 100%{transform:scale(1)} }
+  .post-action.pinned { color:var(--pin-color); }
+  .post-delete-btn { background:none; border:none; color:var(--muted); cursor:pointer; padding:4px; display:flex; align-items:center; margin-left:auto; font-size:14px; }
+  .post-delete-btn:active { color:var(--red); }
 
-  .empty-feed {
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:60px 24px; text-align:center; color:var(--muted);
-    gap:12px;
-  }
-  .empty-feed .big { font-size:48px; opacity:.5; }
-  .empty-feed p { font-size:15px; }
+  .empty-feed { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 24px; text-align:center; color:var(--muted); gap:12px; }
+  .loading-feed { display:flex; align-items:center; justify-content:center; padding:60px 24px; color:var(--muted); font-size:14px; }
 
-  .loading-feed {
-    display:flex; align-items:center; justify-content:center;
-    padding:60px 24px; color:var(--muted); font-size:14px;
+  /* ===== Pages (Search, Notifications, Profile, Settings) ===== */
+  .search-page, .notif-page, .profile-page, .settings-page {
+    position:fixed; inset:0; max-width:480px; margin:0 auto; background:var(--bg); z-index:170;
+    transform:translateX(100%); transition:transform .25s ease; display:flex; flex-direction:column; overflow:hidden;
   }
+  .search-page.open, .notif-page.open, .profile-page.open, .settings-page.open { transform:translateX(0); }
+  .page-header { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .back-btn { background:none; border:none; color:var(--text); cursor:pointer; padding:4px; display:flex; }
+  .back-btn svg { width:24px; height:24px; stroke:var(--text); stroke-width:2; fill:none; }
+  .page-header .title { font-size:16px; font-weight:700; flex:1; }
+  
+  .search-input-wrap { flex:1; position:relative; }
+  .search-input-wrap svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); width:16px; height:16px; stroke:var(--muted); stroke-width:2; fill:none; }
+  .search-input { width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:22px; padding:10px 16px 10px 36px; color:var(--text); font-size:14px; font-family:inherit; outline:none; }
+  .search-body, .notif-body { flex:1; overflow-y:auto; padding:8px 0; }
+  .search-body::-webkit-scrollbar, .notif-body::-webkit-scrollbar { display:none; }
+  .search-section-title { padding:12px 16px 6px; font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .search-empty, .notif-empty { padding:40px 20px; text-align:center; color:var(--muted); font-size:14px; }
 
-  .sheet-backdrop {
-    position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:100;
-    opacity:0; pointer-events:none; transition:opacity .25s ease;
-  }
+  .notif-item { display:flex; align-items:flex-start; gap:12px; padding:14px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; position:relative; }
+  .notif-item:active { background:var(--surface-2); }
+  .notif-item.unread { background:rgba(0,149,246,.06); }
+  .notif-item .avatar { width:40px; height:40px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+  .notif-item .body { flex:1; min-width:0; }
+  .notif-item .text { font-size:14px; line-height:1.4; color:var(--text); }
+  .notif-item .text b { font-weight:700; }
+  .notif-item .time { font-size:11px; color:var(--muted); margin-top:4px; }
+  .notif-item .dot { width:8px; height:8px; border-radius:50%; background:var(--blue); flex-shrink:0; margin-top:18px; }
+  .notif-delete-btn { background:none; border:none; color:var(--muted); cursor:pointer; padding:4px; display:flex; align-items:center; flex-shrink:0; margin-top:10px; }
+  .notif-delete-btn:active { color:var(--red); }
+
+  .profile-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .profile-body::-webkit-scrollbar { display:none; }
+  .profile-main { padding:24px 16px 16px; text-align:center; display:flex; flex-direction:column; align-items:center; }
+  .profile-emoji { width:88px; height:88px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:46px; margin-bottom:12px; cursor:pointer; border:2px solid var(--border); }
+  .profile-username { font-size:20px; font-weight:800; margin-bottom:4px; }
+  .profile-realname { font-size:13px; color:var(--muted); margin-bottom:6px; }
+  .profile-meta { font-size:12px; color:var(--muted); margin-bottom:6px; }
+  .profile-you-badge { background:var(--blue); color:white; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; letter-spacing:.5px; }
+  .profile-stats { display:flex; gap:24px; justify-content:center; margin:20px 0 16px; padding:12px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); width:100%; }
+  .stat { background:none; border:none; color:var(--text); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 16px; }
+  .stat .num { font-size:17px; font-weight:800; }
+  .stat .label { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+  .profile-actions { display:flex; gap:10px; margin-top:4px; }
+  .profile-action-btn { background:var(--blue); color:white; border:none; border-radius:10px; padding:10px 24px; font-size:14px; font-weight:700; cursor:pointer; transition:all .15s; }
+  .profile-action-btn.outline { background:none; border:1px solid var(--border); color:var(--text); }
+  .profile-section-title { padding:16px 16px 8px; font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+
+  .settings-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .settings-body::-webkit-scrollbar { display:none; }
+  .settings-section { padding:16px; border-bottom:1px solid var(--border); }
+  .settings-section-title { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:12px; }
+  .settings-avatar-wrap { display:flex; align-items:center; gap:16px; margin-bottom:8px; }
+  .settings-avatar { width:64px; height:64px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:32px; flex-shrink:0; cursor:pointer; border:2px solid var(--border); }
+  .settings-avatar-info { flex:1; min-width:0; }
+  .settings-avatar-info .uname { font-size:15px; font-weight:700; }
+  .settings-change-btn { background:none; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; flex-shrink:0; }
+  .settings-emoji-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .settings-row { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid var(--border); cursor:pointer; }
+  .settings-row:last-child { border-bottom:none; }
+  .settings-row .label { font-size:15px; color:var(--text); }
+  .settings-row .value { font-size:13px; color:var(--muted); }
+  .settings-row.danger .label { color:var(--red); }
+
+  .avatar-viewer { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:400; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+  .avatar-viewer.open { opacity:1; pointer-events:auto; }
+  .avatar-viewer .big-emoji { width:min(60vw,280px); height:min(60vw,280px); border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:min(30vw,140px); box-shadow:0 8px 40px rgba(0,0,0,.6); }
+  .avatar-viewer .close-viewer { position:absolute; top:20px; right:20px; background:rgba(0,0,0,.6); border:1px solid var(--border); color:white; width:40px; height:40px; border-radius:50%; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .avatar-viewer .viewer-name { position:absolute; bottom:40px; left:50%; transform:translateX(-50%); font-size:16px; font-weight:700; color:white; }
+
+  .list-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:180; opacity:0; pointer-events:none; transition:opacity .25s ease; }
+  .list-backdrop.open { opacity:1; pointer-events:auto; }
+  .list-sheet { position:fixed; left:0; right:0; bottom:0; max-width:480px; margin:0 auto; height:70vh; background:var(--surface); border-radius:20px 20px 0 0; z-index:181; transform:translateY(100%); transition:transform .3s cubic-bezier(.32,.72,0,1); display:flex; flex-direction:column; border-top:1px solid var(--border); }
+  .list-sheet.open { transform:translateY(0); }
+  .list-header { display:flex; align-items:center; justify-content:space-between; padding:16px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .list-header h3 { font-size:16px; font-weight:700; }
+  .list-header button { background:none; border:none; color:var(--muted); font-size:22px; cursor:pointer; line-height:1; padding:0 4px; }
+  .user-list { flex:1; overflow-y:auto; padding:8px 0; }
+  .user-list::-webkit-scrollbar { display:none; }
+  .user-row { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; }
+  .user-row:active { background:var(--surface-2); }
+  .user-row .avatar { width:44px; height:44px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; }
+  .user-row .info { flex:1; min-width:0; }
+  .user-row .uname { font-size:14px; font-weight:700; }
+  .user-row .realname { font-size:12px; color:var(--muted); }
+  .user-row .follow-btn-sm { background:var(--blue); color:white; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; flex-shrink:0; }
+  .user-row .follow-btn-sm.following { background:none; border:1px solid var(--border); color:var(--text); }
+  .empty-list { padding:40px 20px; text-align:center; color:var(--muted); font-size:14px; }
+
+  .sheet-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:100; opacity:0; pointer-events:none; transition:opacity .25s ease; }
   .sheet-backdrop.open { opacity:1; pointer-events:auto; }
-  .sheet {
-    position:fixed; left:0; right:0; bottom:0; max-width:480px; margin:0 auto;
-    height:75vh; background:var(--surface); border-radius:20px 20px 0 0;
-    z-index:101; transform:translateY(100%);
-    transition:transform .3s cubic-bezier(.32,.72,0,1);
-    display:flex; flex-direction:column; border-top:1px solid var(--border);
-  }
+  .sheet { position:fixed; left:0; right:0; bottom:0; max-width:480px; margin:0 auto; height:75vh; background:var(--surface); border-radius:20px 20px 0 0; z-index:101; transform:translateY(100%); transition:transform .3s cubic-bezier(.32,.72,0,1); display:flex; flex-direction:column; border-top:1px solid var(--border); }
   .sheet.open { transform:translateY(0); }
-  .sheet-handle {
-    width:36px; height:4px; background:#555; border-radius:2px;
-    margin:8px auto 4px; flex-shrink:0;
-  }
-  .sheet-header {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:8px 16px 12px; border-bottom:1px solid var(--border); flex-shrink:0;
-  }
+  .sheet-handle { width:36px; height:4px; background:#555; border-radius:2px; margin:8px auto 4px; flex-shrink:0; }
+  .sheet-header { display:flex; align-items:center; justify-content:space-between; padding:8px 16px 12px; border-bottom:1px solid var(--border); flex-shrink:0; }
   .sheet-header h3 { font-size:15px; font-weight:600; }
-  .sheet-header button {
-    background:none; border:none; color:var(--muted);
-    font-size:22px; cursor:pointer; line-height:1; padding:0 4px;
-  }
-
-  .sheet-origin {
-    padding:10px 16px; border-bottom:1px solid var(--border);
-    display:flex; gap:10px; flex-shrink:0; background:#0f0f0f;
-  }
-  .sheet-origin .post-avatar { width:32px; height:32px; font-size:12px; }
+  .sheet-header button { background:none; border:none; color:var(--muted); font-size:22px; cursor:pointer; line-height:1; padding:0 4px; }
+  .sheet-origin { padding:10px 16px; border-bottom:1px solid var(--border); display:flex; gap:10px; flex-shrink:0; background:#0f0f0f; }
+  .sheet-origin .post-avatar { width:32px; height:32px; font-size:18px; }
   .sheet-origin .so-body { flex:1; min-width:0; }
   .sheet-origin .so-username { font-size:13px; font-weight:700; margin-bottom:2px; }
-  .sheet-origin .so-text {
-    font-size:13px; color:#ccc; line-height:1.4;
-    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
-  }
-
-  .comments-list {
-    flex:1; overflow-y:auto; padding:12px 16px;
-    display:flex; flex-direction:column; gap:16px;
-  }
+  .sheet-origin .so-text { font-size:13px; color:#ccc; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .comments-list { flex:1; overflow-y:auto; padding:12px 16px; display:flex; flex-direction:column; gap:16px; }
   .comments-list::-webkit-scrollbar { display:none; }
-  .comment {
-    display:flex; gap:10px; animation:fadeIn .25s ease;
-  }
-  .comment-avatar {
-    width:32px; height:32px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    font-weight:700; font-size:12px; color:white; flex-shrink:0;
-  }
+  .comment { display:flex; gap:10px; animation:fadeIn .25s ease; position:relative; }
+  .comment.reply { margin-left:32px; padding-left:10px; border-left:2px solid var(--border); }
+  .comment-avatar { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; background:var(--surface-2); }
   .comment-body { flex:1; min-width:0; }
-  .comment-username { font-size:13px; font-weight:700; margin-bottom:2px; }
+  .comment-username { font-size:13px; font-weight:700; margin-bottom:2px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .comment-username .reply-to { color:var(--blue); font-weight:600; }
   .comment-text { font-size:14px; line-height:1.4; word-wrap:break-word; }
-  .comment-meta { font-size:11px; color:var(--muted); margin-top:4px; }
-  .empty-comments {
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:40px 20px; color:var(--muted); text-align:center; gap:8px;
-  }
-  .empty-comments .emoji { font-size:40px; opacity:.6; }
-  .empty-comments p { font-size:14px; }
+  .comment-meta { font-size:11px; color:var(--muted); margin-top:4px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .comment-btn { background:none; border:none; color:var(--muted); font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:4px; padding:0; transition:color .15s; }
+  .comment-btn.liked { color:var(--red); }
+  .comment-btn.pinned { color:var(--pin-color); }
+  .comment-delete-btn { color:var(--red); }
+  .toggle-replies-btn { color:var(--blue); }
+  .comment-btn:active { transform:scale(.95); }
 
-  .comment-input-bar {
-    display:flex; align-items:center; gap:10px;
-    padding:10px 16px 16px; border-top:1px solid var(--border);
-    flex-shrink:0; background:var(--surface);
-  }
-  .comment-input-bar .input-avatar {
-    width:32px; height:32px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    font-weight:700; font-size:12px; color:white; flex-shrink:0;
-  }
-  .comment-input {
-    flex:1; background:var(--surface-2); border:1px solid var(--border);
-    border-radius:22px; padding:10px 16px; color:var(--text);
-    font-size:14px; font-family:inherit; outline:none;
-  }
-  .comment-input::placeholder { color:var(--muted); }
+  .empty-comments { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; color:var(--muted); text-align:center; gap:8px; }
+  .reply-banner { display:none; padding:8px 16px; background:var(--surface-2); border-top:1px solid var(--border); font-size:12px; color:var(--muted); align-items:center; justify-content:space-between; flex-shrink:0; }
+  .reply-banner.visible { display:flex; }
+  .reply-banner b { color:var(--blue); }
+  .reply-banner button { background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:0 4px; }
+  
+  .comment-input-bar { display:flex; align-items:center; gap:10px; padding:10px 16px 16px; border-top:1px solid var(--border); flex-shrink:0; background:var(--surface); position:relative; }
+  .comment-input-bar .input-avatar { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; background:var(--surface-2); }
+  .comment-input { flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:22px; padding:10px 16px; color:var(--text); font-size:14px; font-family:inherit; outline:none; }
   .comment-input:focus { border-color:#444; }
-  .post-comment-btn {
-    background:none; border:none; color:var(--blue);
-    font-size:14px; font-weight:600; cursor:pointer;
-    padding:6px 4px; flex-shrink:0; opacity:.4; pointer-events:none;
-    transition:opacity .15s;
-  }
+  .post-comment-btn { background:none; border:none; color:var(--blue); font-size:14px; font-weight:600; cursor:pointer; padding:6px 4px; flex-shrink:0; opacity:.4; pointer-events:none; transition:opacity .15s; }
   .post-comment-btn.active { opacity:1; pointer-events:auto; }
 
-  .toast {
-    position:fixed; bottom:40px; left:50%;
-    transform:translateX(-50%) translateY(20px);
-    background:#262626; color:white; padding:12px 20px;
-    border-radius:8px; font-size:14px; font-weight:500;
-    opacity:0; pointer-events:none; transition:all .3s ease;
-    z-index:300; max-width:90%; text-align:center;
-    box-shadow:0 4px 20px rgba(0,0,0,.5);
-  }
+  /* Tags Text Styling */
+  .post-text b, .comment-text b, .so-text b { font-weight:700; }
+  .post-text i, .comment-text i, .so-text i { font-style:italic; }
+  .post-text u, .comment-text u, .so-text u { text-decoration:underline; }
+  .post-text s, .comment-text s, .so-text s { text-decoration:line-through; }
+  .tag-text { color:var(--blue); font-weight:600; text-decoration:none; }
+
+  /* Toast & Confirm */
+  .toast { position:fixed; bottom:40px; left:50%; transform:translateX(-50%) translateY(20px); background:#262626; color:white; padding:12px 20px; border-radius:8px; font-size:14px; font-weight:500; opacity:0; pointer-events:none; transition:all .3s ease; z-index:300; max-width:90%; text-align:center; box-shadow:0 4px 20px rgba(0,0,0,.5); }
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
   .toast.error { background:var(--red); }
+  .confirm-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:500; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s ease; padding:24px; }
+  .confirm-backdrop.open { opacity:1; pointer-events:auto; }
+  .confirm-box { background:var(--surface); border-radius:16px; padding:24px; max-width:340px; width:100%; text-align:center; border:1px solid var(--border); }
+  .confirm-box h3 { font-size:17px; font-weight:700; margin-bottom:8px; }
+  .confirm-box p { font-size:14px; color:var(--muted); line-height:1.5; margin-bottom:20px; }
+  .confirm-actions { display:flex; gap:10px; }
+  .confirm-actions button { flex:1; padding:12px; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; border:none; }
+  .confirm-cancel { background:var(--surface-2); color:var(--text); }
+  .confirm-ok { background:var(--red); color:white; }
 </style>
 </head>
 <body>
 
 <div class="app">
-  <div class="auth-screen" id="authScreen">
+  <!-- Auth Screens -->
+  <div class="auth-screen" id="loginScreen">
     <div class="auth-logo">OneChat</div>
-    <div class="auth-tagline">Speak freely. No noise.</div>
-    <div class="avatar-preview" id="avatarPreview">?</div>
+    <div class="auth-tagline">Welcome back</div>
     <div class="auth-form">
-      <div class="auth-label">Pick a username</div>
-      <input type="text" class="auth-input" id="usernameInput" placeholder="e.g. luna.stars" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <div class="auth-error" id="authError"></div>
-      <button class="auth-btn" id="enterBtn" disabled>Enter OneChat</button>
-      <div class="auth-hint">No email. No password. Just a name.<br>Your account is saved in this browser.</div>
+      <div class="auth-label">Username</div>
+      <input type="text" class="auth-input" id="loginUsername" placeholder="your username" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="auth-error" id="loginError"></div>
+      <button class="auth-btn" id="loginBtn" disabled>Log in</button>
+      <div class="auth-switch">New here? <a id="goRegister">Create account</a></div>
     </div>
   </div>
 
+  <div class="auth-screen hidden" id="registerScreen">
+    <div class="auth-logo">OneChat</div>
+    <div class="auth-tagline">Create your account</div>
+    <div class="auth-form">
+      <div class="auth-label">Profile emoji</div>
+      <div class="avatar-preview" id="regAvatarPreview">♥️</div>
+      <div class="emoji-row" id="regEmojiRow"></div>
+      <div class="auth-label">Username</div>
+      <input type="text" class="auth-input" id="regUsername" placeholder="e.g. luna.stars" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="auth-label">Your name</div>
+      <input type="text" class="auth-input" id="regName" placeholder="e.g. Luna" maxlength="40" autocomplete="off">
+      <div class="auth-label">Country</div>
+      <select class="auth-select" id="regCountry"><option value="">Select country</option></select>
+      <div class="auth-label">Gender</div>
+      <select class="auth-select" id="regGender">
+        <option value="">Select gender</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+        <option value="Other">Other</option>
+        <option value="Prefer not to say">Prefer not to say</option>
+      </select>
+      <div class="auth-error" id="regError"></div>
+      <button class="auth-btn" id="registerBtn" disabled>Create account</button>
+      <div class="auth-switch">Already have an account? <a id="goLogin">Log in</a></div>
+    </div>
+  </div>
+
+  <!-- Main App -->
   <div id="mainApp" style="display:none; flex-direction:column; height:100%;">
     <header class="topbar">
       <span class="logo">OneChat</span>
       <div class="right">
-        <div class="user-chip">
+        <button class="icon-btn" id="searchBtn" title="Search">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+        <button class="icon-btn" id="notifBtn" title="Notifications">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+        </button>
+        <div class="user-chip" id="userChip">
           <div class="mini-avatar" id="chipAvatar">U</div>
           <span class="name" id="chipName">you</span>
         </div>
-        <button class="icon-btn" id="signOutBtn" title="Sign out" aria-label="Sign out">
-          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
+        <button class="icon-btn" id="settingsBtn" title="Settings">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
       </div>
     </header>
@@ -314,12 +334,20 @@
     <div class="compose">
       <div class="compose-avatar" id="composeAvatar">U</div>
       <div class="compose-body">
-        <textarea class="compose-input" id="composeInput" placeholder="What's on your mind?" maxlength="280" rows="1"></textarea>
+        <div class="compose-input" id="composeInput" contenteditable="true" data-placeholder="What's on your mind?"></div>
+        <div class="format-bar">
+          <!-- Added onmousedown="event.preventDefault()" to keep focus -->
+          <button class="fmt-btn" data-fmt="bold" onmousedown="event.preventDefault()">B</button>
+          <button class="fmt-btn" data-fmt="italic" onmousedown="event.preventDefault()">I</button>
+          <button class="fmt-btn" data-fmt="underline" onmousedown="event.preventDefault()">U</button>
+          <button class="fmt-btn" data-fmt="strikeThrough" onmousedown="event.preventDefault()">S</button>
+        </div>
         <div class="compose-actions">
           <span class="char-count" id="charCount">0/280</span>
           <button class="post-btn" id="postBtn">Post</button>
         </div>
       </div>
+      <div class="tag-popup" id="composeTagPopup"></div>
     </div>
 
     <div class="feed" id="feed">
@@ -328,25 +356,134 @@
   </div>
 </div>
 
+<!-- Search -->
+<div class="search-page" id="searchPage">
+  <div class="page-header">
+    <button class="back-btn" id="searchBack"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search people or posts...">
+    </div>
+  </div>
+  <div class="search-body" id="searchBody"></div>
+</div>
+
+<!-- Notifications -->
+<div class="notif-page" id="notifPage">
+  <div class="page-header">
+    <button class="back-btn" id="notifBack"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="title">Notifications</span>
+    <button class="mark-read" id="markAllRead" style="background:none; border:none; color:var(--blue); font-size:12px; font-weight:600; cursor:pointer;">Mark all read</button>
+  </div>
+  <div class="notif-body" id="notifBody"><div class="loading-feed">Loading...</div></div>
+</div>
+
+<!-- Profile -->
+<div class="profile-page" id="profilePage">
+  <div class="page-header">
+    <button class="back-btn" id="profileBack"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="title" id="profileTitle">Profile</span>
+    <button class="delete-account-btn" id="deleteAccountBtn" style="display:none; background:none; border:none; color:var(--red); font-size:12px; font-weight:600; cursor:pointer; padding:4px 8px;">Delete</button>
+  </div>
+  <div class="profile-body">
+    <div class="profile-main">
+      <div class="profile-emoji" id="profileEmoji">👤</div>
+      <div class="profile-username" id="profileUsername">user</div>
+      <div class="profile-realname" id="profileRealName"></div>
+      <div class="profile-meta" id="profileMeta"></div>
+      <div id="profileYouBadge"></div>
+      <div class="profile-stats">
+        <button class="stat" id="statFollowers"><span class="num" id="numFollowers">0</span><span class="label">Followers</span></button>
+        <button class="stat" id="statFollowing"><span class="num" id="numFollowing">0</span><span class="label">Following</span></button>
+      </div>
+      <div class="profile-actions" id="profileActions"></div>
+    </div>
+    <div class="profile-section-title">Posts</div>
+    <div class="profile-posts" id="profilePosts"></div>
+  </div>
+</div>
+
+<!-- Settings -->
+<div class="settings-page" id="settingsPage">
+  <div class="page-header">
+    <button class="back-btn" id="settingsBack"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="title">Settings</span>
+  </div>
+  <div class="settings-body">
+    <div class="settings-section">
+      <div class="settings-section-title">Profile</div>
+      <div class="settings-avatar-wrap">
+        <div class="settings-avatar" id="settingsAvatar">U</div>
+        <div class="settings-avatar-info">
+          <div class="uname" id="settingsUsername">you</div>
+        </div>
+        <button class="settings-change-btn" id="settingsViewProfileBtn">Profile</button>
+      </div>
+      <div class="settings-section-title" style="margin-top:20px;">Change profile emoji</div>
+      <div class="settings-emoji-row" id="settingsEmojiRow"></div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Account</div>
+      <div class="settings-row" style="cursor:default;"><span class="label">Name</span><span class="value" id="settingsName">—</span></div>
+      <div class="settings-row" style="cursor:default;"><span class="label">Country</span><span class="value" id="settingsCountry">—</span></div>
+      <div class="settings-row" style="cursor:default;"><span class="label">Gender</span><span class="value" id="settingsGender">—</span></div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Danger zone</div>
+      <div class="settings-row danger" id="settingsDeleteAccount"><span class="label">Delete account</span></div>
+      <div class="settings-row danger" id="settingsSignOut"><span class="label">Sign out</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Avatar Viewer -->
+<div class="avatar-viewer" id="avatarViewer">
+  <button class="close-viewer" id="closeViewer">✕</button>
+  <div class="big-emoji" id="bigEmoji">♥️</div>
+  <div class="viewer-name" id="viewerName">user</div>
+</div>
+
+<!-- Followers/Following List -->
+<div class="list-backdrop" id="listBackdrop"></div>
+<div class="list-sheet" id="listSheet">
+  <div class="list-header"><h3 id="listTitle">Followers</h3><button id="closeList">✕</button></div>
+  <div class="user-list" id="userList"></div>
+</div>
+
+<!-- Comments Sheet -->
 <div class="sheet-backdrop" id="sheetBackdrop"></div>
 <div class="sheet" id="sheet">
   <div class="sheet-handle"></div>
-  <div class="sheet-header">
-    <h3>Comments</h3>
-    <button id="closeSheet">✕</button>
-  </div>
+  <div class="sheet-header"><h3>Comments</h3><button id="closeSheet">✕</button></div>
   <div class="sheet-origin" id="sheetOrigin" style="display:none;">
     <div class="post-avatar" id="soAvatar">U</div>
     <div class="so-body">
-      <div class="so-username" id="soUsername">@user</div>
+      <div class="so-username" id="soUsername">user</div>
       <div class="so-text" id="soText"></div>
     </div>
   </div>
   <div class="comments-list" id="commentsList"></div>
+  <div class="reply-banner" id="replyBanner">
+    <span>Replying to <b id="replyToName">user</b></span>
+    <button id="cancelReply">✕</button>
+  </div>
   <div class="comment-input-bar">
     <div class="input-avatar" id="commentInputAvatar">U</div>
     <input type="text" class="comment-input" id="commentInput" placeholder="Add a comment..." maxlength="280">
     <button class="post-comment-btn" id="postCommentBtn">Post</button>
+    <div class="tag-popup" id="commentTagPopup" style="bottom:60px;"></div>
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="confirm-backdrop" id="confirmBackdrop">
+  <div class="confirm-box">
+    <h3 id="confirmTitle">Confirm</h3>
+    <p id="confirmText">Are you sure?</p>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" id="confirmCancel">Cancel</button>
+      <button class="confirm-ok" id="confirmOk">Delete</button>
+    </div>
   </div>
 </div>
 
@@ -367,24 +504,82 @@
     }
   } catch (e) { console.error('Supabase init failed:', e); }
 
-  // ===== DOM =====
-  var authScreen = document.getElementById('authScreen');
-  var usernameInput = document.getElementById('usernameInput');
-  var enterBtn = document.getElementById('enterBtn');
-  var authError = document.getElementById('authError');
-  var avatarPreview = document.getElementById('avatarPreview');
-  var mainApp = document.getElementById('mainApp');
+  var EMOJIS = ['♥️','👊','🤝','🤷‍♂️','🥷','🧔‍♂️','👱‍♂️','👨‍🦲','👨‍🦱','👨‍🦰','👨‍🦳','🦅','👟'];
+  var COUNTRIES = ['Afghanistan','Albania','Algeria','Andorra','Angola','Argentina','Armenia','Australia','Austria','Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi','Cambodia','Cameroon','Canada','Cape Verde','Central African Republic','Chad','Chile','China','Colombia','Comoros','Congo','Costa Rica','Croatia','Cuba','Cyprus','Czech Republic','Denmark','Djibouti','Dominica','Dominican Republic','Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia','Fiji','Finland','France','Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau','Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy','Ivory Coast','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kiribati','Kuwait','Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania','Mauritius','Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar','Namibia','Nauru','Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria','North Korea','North Macedonia','Norway','Oman','Pakistan','Palau','Palestine','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal','Qatar','Romania','Russia','Rwanda','Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines','Samoa','San Marino','Sao Tome and Principe','Saudi Arabia','Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria','Taiwan','Tajikistan','Tanzania','Thailand','Timor-Leste','Togo','Tonga','Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe'];
 
+  // DOM Elements
+  var loginScreen = document.getElementById('loginScreen');
+  var registerScreen = document.getElementById('registerScreen');
+  var loginUsername = document.getElementById('loginUsername');
+  var loginBtn = document.getElementById('loginBtn');
+  var loginError = document.getElementById('loginError');
+  var goRegister = document.getElementById('goRegister');
+  var goLogin = document.getElementById('goLogin');
+  var regUsername = document.getElementById('regUsername');
+  var regName = document.getElementById('regName');
+  var regCountry = document.getElementById('regCountry');
+  var regGender = document.getElementById('regGender');
+  var regError = document.getElementById('regError');
+  var registerBtn = document.getElementById('registerBtn');
+  var regAvatarPreview = document.getElementById('regAvatarPreview');
+  var regEmojiRow = document.getElementById('regEmojiRow');
+  var mainApp = document.getElementById('mainApp');
   var chipAvatar = document.getElementById('chipAvatar');
   var chipName = document.getElementById('chipName');
+  var userChip = document.getElementById('userChip');
   var composeAvatar = document.getElementById('composeAvatar');
   var commentInputAvatar = document.getElementById('commentInputAvatar');
-
   var composeInput = document.getElementById('composeInput');
   var charCount = document.getElementById('charCount');
   var postBtn = document.getElementById('postBtn');
   var feed = document.getElementById('feed');
-
+  var searchBtn = document.getElementById('searchBtn');
+  var notifBtn = document.getElementById('notifBtn');
+  var notifBadge = document.getElementById('notifBadge');
+  var searchPage = document.getElementById('searchPage');
+  var searchBack = document.getElementById('searchBack');
+  var searchInput = document.getElementById('searchInput');
+  var searchBody = document.getElementById('searchBody');
+  var notifPage = document.getElementById('notifPage');
+  var notifBack = document.getElementById('notifBack');
+  var notifBody = document.getElementById('notifBody');
+  var markAllRead = document.getElementById('markAllRead');
+  var profilePage = document.getElementById('profilePage');
+  var profileBack = document.getElementById('profileBack');
+  var profileTitle = document.getElementById('profileTitle');
+  var profileEmoji = document.getElementById('profileEmoji');
+  var profileUsername = document.getElementById('profileUsername');
+  var profileRealName = document.getElementById('profileRealName');
+  var profileMeta = document.getElementById('profileMeta');
+  var profileYouBadge = document.getElementById('profileYouBadge');
+  var numFollowers = document.getElementById('numFollowers');
+  var numFollowing = document.getElementById('numFollowing');
+  var statFollowers = document.getElementById('statFollowers');
+  var statFollowing = document.getElementById('statFollowing');
+  var profileActions = document.getElementById('profileActions');
+  var profilePosts = document.getElementById('profilePosts');
+  var deleteAccountBtn = document.getElementById('deleteAccountBtn');
+  var settingsPage = document.getElementById('settingsPage');
+  var settingsBack = document.getElementById('settingsBack');
+  var settingsAvatar = document.getElementById('settingsAvatar');
+  var settingsUsername = document.getElementById('settingsUsername');
+  var settingsEmojiRow = document.getElementById('settingsEmojiRow');
+  var settingsViewProfileBtn = document.getElementById('settingsViewProfileBtn');
+  var settingsSignOut = document.getElementById('settingsSignOut');
+  var settingsDeleteAccount = document.getElementById('settingsDeleteAccount');
+  var settingsBtn = document.getElementById('settingsBtn');
+  var settingsName = document.getElementById('settingsName');
+  var settingsCountry = document.getElementById('settingsCountry');
+  var settingsGender = document.getElementById('settingsGender');
+  var avatarViewer = document.getElementById('avatarViewer');
+  var bigEmoji = document.getElementById('bigEmoji');
+  var viewerName = document.getElementById('viewerName');
+  var closeViewer = document.getElementById('closeViewer');
+  var listBackdrop = document.getElementById('listBackdrop');
+  var listSheet = document.getElementById('listSheet');
+  var listTitle = document.getElementById('listTitle');
+  var userList = document.getElementById('userList');
+  var closeList = document.getElementById('closeList');
   var sheetBackdrop = document.getElementById('sheetBackdrop');
   var sheet = document.getElementById('sheet');
   var closeSheet = document.getElementById('closeSheet');
@@ -395,38 +590,98 @@
   var commentsList = document.getElementById('commentsList');
   var commentInput = document.getElementById('commentInput');
   var postCommentBtn = document.getElementById('postCommentBtn');
-
+  var replyBanner = document.getElementById('replyBanner');
+  var replyToName = document.getElementById('replyToName');
+  var cancelReply = document.getElementById('cancelReply');
   var toast = document.getElementById('toast');
-  var signOutBtn = document.getElementById('signOutBtn');
+  var confirmBackdrop = document.getElementById('confirmBackdrop');
+  var confirmTitle = document.getElementById('confirmTitle');
+  var confirmText = document.getElementById('confirmText');
+  var confirmCancel = document.getElementById('confirmCancel');
+  var confirmOk = document.getElementById('confirmOk');
+  
+  var composeTagPopup = document.getElementById('composeTagPopup');
+  var commentTagPopup = document.getElementById('commentTagPopup');
 
-  // ===== State =====
+  // State
   var currentUser = null;
   var currentPost = null;
+  var replyingTo = null;
+  var selectedEmoji = '♥️';
   var toastTimer = null;
+  var followingSet = {};
+  var viewingProfile = null;
+  var notifUnread = 0;
+  var confirmCallback = null;
+  var collapsedReplies = {};
+  var allUsersCache = [];
+  
+  // Tagging state
+  var isTagging = false;
+  var tagQuery = '';
+  var tagStartPos = -1;
+  var activeTagInput = null;
 
-  var AVATAR_COLORS = ['#f09433','#e6683c','#dc2743','#cc2366','#bc1888','#0095f6','#22c55e','#8b5cf6','#06b6d4','#f59e0b'];
+  // ---------- HELPERS ----------
+  function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
-  // ===== Helpers =====
-  function colorFor(name) {
-    var hash = 0;
-    for (var i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-  }
-
-  function avatarHtml(name, size) {
-    var letter = (name || '?').charAt(0).toUpperCase();
-    var color = colorFor(name || '?');
-    var s = size || 40;
-    var fs = Math.round(s * 0.4);
-    return '<div style="width:' + s + 'px;height:' + s + 'px;border-radius:50%;background:' + color +
-      ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:' + fs +
-      'px;color:white;flex-shrink:0;">' + letter + '</div>';
-  }
-
-  function escapeHtml(s) {
-    var d = document.createElement('div');
-    d.textContent = s || '';
-    return d.innerHTML;
+  // Safe HTML renderer and injects @tags
+  function renderFormatted(html) {
+    if (!html) return '';
+    var t = document.createElement('template');
+    t.innerHTML = html;
+    var allowed = ['B', 'I', 'U', 'S', 'BR', 'DIV', 'P', 'SPAN'];
+    
+    function sanitize(node) {
+      var children = Array.from(node.childNodes);
+      for (var i = 0; i < children.length; i++) {
+        var child = children[i];
+        if (child.nodeType === 1) { 
+          if (!allowed.includes(child.tagName)) {
+            var textNode = document.createTextNode(child.textContent);
+            node.replaceChild(textNode, child);
+          } else {
+            if (child.tagName === 'SPAN' && !child.classList.contains('tag-text')) {
+               node.replaceChild(document.createTextNode(child.textContent), child);
+               continue;
+            }
+            Array.from(child.attributes).forEach(function(attr) {
+              if (child.tagName === 'SPAN' && attr.name === 'class') return;
+              child.removeAttribute(attr.name);
+            });
+            sanitize(child);
+          }
+        }
+      }
+    }
+    sanitize(t.content);
+    
+    // Process text nodes for @tags
+    var walker = document.createTreeWalker(t.content, NodeFilter.SHOW_TEXT, null, false);
+    var nodesToReplace = [];
+    var n;
+    while (n = walker.nextNode()) {
+      if (n.nodeValue.includes('@')) {
+        nodesToReplace.push(n);
+      }
+    }
+    nodesToReplace.forEach(function(node) {
+      var frag = document.createDocumentFragment();
+      var parts = node.nodeValue.split(/(@[a-zA-Z0-9._]+)/g);
+      parts.forEach(function(part) {
+        if (part.match(/^@[a-zA-Z0-9._]+$/)) {
+          var span = document.createElement('span');
+          span.className = 'tag-text';
+          span.textContent = part;
+          frag.appendChild(span);
+        } else if (part) {
+          frag.appendChild(document.createTextNode(part));
+        }
+      });
+      node.parentNode.replaceChild(frag, node);
+    });
+    
+    return t.innerHTML;
   }
 
   function showToast(msg, isError) {
@@ -436,7 +691,6 @@
     toast.classList.add('show');
     toastTimer = setTimeout(function() { toast.classList.remove('show'); }, 2400);
   }
-
   function timeAgo(iso) {
     if (!iso) return 'now';
     var diff = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -446,340 +700,512 @@
     if (diff < 604800) return Math.floor(diff / 86400) + 'd';
     return new Date(iso).toLocaleDateString();
   }
+  function buildEmojiRow(container, selected, onSelect) {
+    container.innerHTML = '';
+    EMOJIS.forEach(function(e) {
+      var el = document.createElement('div');
+      el.className = 'emoji-opt' + (e === selected ? ' selected' : '');
+      el.textContent = e;
+      el.addEventListener('click', function() {
+        Array.prototype.forEach.call(container.children, function(c) { c.classList.toggle('selected', c.textContent === e); });
+        onSelect(e);
+      });
+      container.appendChild(el);
+    });
+  }
+  function showConfirm(title, text, okLabel, callback) {
+    confirmTitle.textContent = title;
+    confirmText.textContent = text;
+    confirmOk.textContent = okLabel || 'Delete';
+    confirmCallback = callback;
+    confirmBackdrop.classList.add('open');
+  }
+  function closeConfirm() { confirmBackdrop.classList.remove('open'); confirmCallback = null; }
+  confirmCancel.addEventListener('click', closeConfirm);
+  confirmBackdrop.addEventListener('click', function(e) { if (e.target === confirmBackdrop) closeConfirm(); });
+  confirmOk.addEventListener('click', function() { var cb = confirmCallback; closeConfirm(); if (cb) cb(); });
 
-  // ===== AUTH =====
-  function updateAvatarPreview() {
-    var name = usernameInput.value.trim();
-    if (name.length === 0) {
-      avatarPreview.textContent = '?';
-      avatarPreview.style.background = 'linear-gradient(45deg,#333,#555)';
-      enterBtn.disabled = true;
-      return;
-    }
-    avatarPreview.textContent = name.charAt(0).toUpperCase();
-    avatarPreview.style.background = colorFor(name);
-    enterBtn.disabled = name.length < 2;
+  // Load Users for Tagging
+  async function fetchAllUsers() {
+    if(!supabase) return;
+    var res = await supabase.from('profiles').select('username, emoji');
+    if (res.data) allUsersCache = res.data;
   }
 
-  usernameInput.addEventListener('input', function() {
+  // Countries
+  COUNTRIES.forEach(function(c) {
+    var opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    regCountry.appendChild(opt);
+  });
+
+  // Screen switching
+  goRegister.addEventListener('click', function() { loginScreen.classList.add('hidden'); registerScreen.classList.remove('hidden'); regUsername.focus(); });
+  goLogin.addEventListener('click', function() { registerScreen.classList.add('hidden'); loginScreen.classList.remove('hidden'); loginUsername.focus(); });
+
+  // LOGIN & REGISTRATION
+  loginUsername.addEventListener('input', function() {
     this.value = this.value.replace(/[^a-zA-Z0-9._]/g, '');
-    authError.textContent = '';
-    updateAvatarPreview();
+    loginError.textContent = '';
+    loginBtn.disabled = this.value.trim().length < 2;
+  });
+  loginUsername.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !loginBtn.disabled) loginBtn.click(); });
+  loginBtn.addEventListener('click', async function() {
+    var name = loginUsername.value.trim();
+    if (name.length < 2) return;
+    if (!supabase) { loginError.textContent = 'Connection error.'; return; }
+    loginBtn.disabled = true; loginBtn.textContent = 'Logging in...';
+    var res = await supabase.from('profiles').select('*').eq('username', name).maybeSingle();
+    if (res.error) { loginError.textContent = 'Could not log in.'; loginBtn.disabled = false; loginBtn.textContent = 'Log in'; return; }
+    if (!res.data) { loginError.textContent = 'No account with that username.'; loginBtn.disabled = false; loginBtn.textContent = 'Log in'; return; }
+    currentUser = { username: res.data.username, avatar: res.data.emoji || '♥️', name: res.data.name || '', country: res.data.country || '', gender: res.data.gender || '' };
+    localStorage.setItem('onechat_user', JSON.stringify(currentUser));
+    finishAuth();
   });
 
-  usernameInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !enterBtn.disabled) enterBtn.click();
+  function updateRegBtn() {
+    var ok = regUsername.value.trim().length >= 2 && regName.value.trim().length >= 1 && regCountry.value && regGender.value;
+    registerBtn.disabled = !ok;
+  }
+  regUsername.addEventListener('input', function() { this.value = this.value.replace(/[^a-zA-Z0-9._]/g, ''); regError.textContent = ''; updateRegBtn(); });
+  regName.addEventListener('input', function() { regError.textContent = ''; updateRegBtn(); });
+  regCountry.addEventListener('change', function() { regError.textContent = ''; updateRegBtn(); });
+  regGender.addEventListener('change', function() { regError.textContent = ''; updateRegBtn(); });
+  buildEmojiRow(regEmojiRow, selectedEmoji, function(e) { selectedEmoji = e; regAvatarPreview.textContent = e; });
+  regAvatarPreview.textContent = selectedEmoji;
+
+  registerBtn.addEventListener('click', async function() {
+    var username = regUsername.value.trim(), name = regName.value.trim(), country = regCountry.value, gender = regGender.value;
+    if (!username || !name || !country || !gender) { regError.textContent = 'Please fill in all fields'; return; }
+    if (!supabase) { regError.textContent = 'Connection error.'; return; }
+    registerBtn.disabled = true; registerBtn.textContent = 'Checking...';
+    var check = await supabase.from('profiles').select('username').eq('username', username).maybeSingle();
+    if (check.error && check.error.code !== 'PGRST116') { regError.textContent = 'Could not check username.'; registerBtn.disabled = false; registerBtn.textContent = 'Create account'; return; }
+    if (check.data) { regError.textContent = 'Username already taken.'; registerBtn.disabled = false; registerBtn.textContent = 'Create account'; return; }
+    var ins = await supabase.from('profiles').insert({ username: username, emoji: selectedEmoji, name: name, country: country, gender: gender }).select().single();
+    if (ins.error) { regError.textContent = 'Could not create account: ' + ins.error.message; registerBtn.disabled = false; registerBtn.textContent = 'Create account'; return; }
+    currentUser = { username: username, avatar: selectedEmoji, name: name, country: country, gender: gender };
+    localStorage.setItem('onechat_user', JSON.stringify(currentUser));
+    finishAuth();
+    showToast('Welcome to OneChat, ' + username + '!');
   });
 
-  enterBtn.addEventListener('click', async function() {
-    var name = usernameInput.value.trim();
-    if (name.length < 2) { authError.textContent = 'Username must be at least 2 characters'; return; }
-    if (!supabase) { authError.textContent = 'Connection error. Refresh and try again.'; return; }
-
-    enterBtn.disabled = true;
-    enterBtn.textContent = 'Checking...';
-
-    var check = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('username', name)
-      .maybeSingle();
-
-    if (check.error && check.error.code !== 'PGRST116') {
-      console.error(check.error);
-      authError.textContent = 'Could not check username. Try again.';
-      enterBtn.disabled = false;
-      enterBtn.textContent = 'Enter OneChat';
-      return;
-    }
-
-    if (check.data) {
-      var login = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('username', name)
-        .single();
-
-      if (login.error || !login.data) {
-        authError.textContent = 'Could not sign in. Try again.';
-        enterBtn.disabled = false;
-        enterBtn.textContent = 'Enter OneChat';
-        return;
-      }
-
-      currentUser = { username: login.data.username, color: login.data.color || colorFor(name) };
-      localStorage.setItem('onechat_user', JSON.stringify(currentUser));
-      finishAuth();
-    } else {
-      var color = colorFor(name);
-      var create = await supabase.from('profiles').insert({
-        username: name,
-        color: color
-      }).select().single();
-
-      if (create.error) {
-        console.error(create.error);
-        authError.textContent = 'Could not create account: ' + create.error.message;
-        enterBtn.disabled = false;
-        enterBtn.textContent = 'Enter OneChat';
-        return;
-      }
-
-      currentUser = { username: name, color: color };
-      localStorage.setItem('onechat_user', JSON.stringify(currentUser));
-      finishAuth();
-      showToast('Welcome to OneChat, @' + name + '!');
-    }
-  });
+  async function loadFollowing() {
+    if (!supabase || !currentUser) return;
+    var res = await supabase.from('follows').select('followed').eq('follower', currentUser.username);
+    followingSet = {};
+    (res.data || []).forEach(function(r) { followingSet[r.followed] = true; });
+  }
 
   function finishAuth() {
-    authScreen.classList.add('hidden');
-    mainApp.style.display = 'flex';
-
-    var c = currentUser.color || colorFor(currentUser.username);
-    var letter = currentUser.username.charAt(0).toUpperCase();
-
-    chipAvatar.style.background = c;
-    chipAvatar.textContent = letter;
-    chipName.textContent = '@' + currentUser.username;
-
-    composeAvatar.style.background = c;
-    composeAvatar.textContent = letter;
-
-    commentInputAvatar.style.background = c;
-    commentInputAvatar.textContent = letter;
-
-    loadFeed();
+    loginScreen.classList.add('hidden'); registerScreen.classList.add('hidden'); mainApp.style.display = 'flex';
+    chipAvatar.textContent = currentUser.avatar; chipName.textContent = currentUser.username;
+    composeAvatar.textContent = currentUser.avatar; commentInputAvatar.textContent = currentUser.avatar;
+    settingsUsername.textContent = currentUser.username; settingsAvatar.textContent = currentUser.avatar;
+    settingsName.textContent = currentUser.name || '—'; settingsCountry.textContent = currentUser.country || '—'; settingsGender.textContent = currentUser.gender || '—';
+    
+    buildEmojiRow(settingsEmojiRow, currentUser.avatar, async function(e) {
+      currentUser.avatar = e;
+      localStorage.setItem('onechat_user', JSON.stringify(currentUser));
+      chipAvatar.textContent = e; composeAvatar.textContent = e; commentInputAvatar.textContent = e; settingsAvatar.textContent = e;
+      if (viewingProfile === currentUser.username) profileEmoji.textContent = e;
+      await supabase.from('profiles').update({ emoji: e }).eq('username', currentUser.username);
+      showToast('Profile emoji updated');
+    });
+    
+    loadFollowing().then(function() { 
+      loadFeed(); 
+      loadNotifCount(); 
+      fetchAllUsers(); 
+    });
   }
 
-  signOutBtn.addEventListener('click', function() {
-    if (!confirm('Sign out of @' + currentUser.username + '? Your posts stay.')) return;
-    localStorage.removeItem('onechat_user');
-    currentUser = null;
-    location.reload();
-  });
+  // ============ TAGGING LOGIC ============
+  function handleTagInput(e, inputType, popupEl) {
+    activeTagInput = inputType;
+    var text, selectionStart;
+    
+    if (inputType === 'compose') {
+      text = composeInput.innerText || '';
+      selectionStart = window.getSelection().anchorOffset;
+    } else {
+      text = commentInput.value;
+      selectionStart = commentInput.selectionStart;
+    }
 
-  // ===== COMPOSE =====
-  function updateCompose() {
-    var text = composeInput.value;
-    var remaining = 280 - text.length;
-    charCount.textContent = text.length + '/280';
-    charCount.classList.toggle('warn', remaining < 20);
-    postBtn.classList.toggle('active', text.trim().length > 0);
-    composeInput.style.height = 'auto';
-    composeInput.style.height = Math.min(composeInput.scrollHeight, 140) + 'px';
+    var textBefore = text.substring(0, selectionStart);
+    var match = textBefore.match(/@([a-zA-Z0-9._]*)$/);
+    
+    if (match) {
+      isTagging = true;
+      tagQuery = match[1].toLowerCase();
+      tagStartPos = selectionStart - match[0].length;
+      
+      var filtered = allUsersCache.filter(function(u) {
+        return u.username.toLowerCase().includes(tagQuery) && u.username !== currentUser.username;
+      }).slice(0, 5);
+
+      if (filtered.length > 0) {
+        popupEl.innerHTML = filtered.map(function(u) {
+          return '<div class="tag-item" data-username="' + escapeHtml(u.username) + '"><span>' + u.emoji + '</span> ' + escapeHtml(u.username) + '</div>';
+        }).join('');
+        popupEl.classList.add('show');
+        
+        Array.from(popupEl.children).forEach(function(child) {
+          child.onclick = function(ev) {
+            ev.preventDefault();
+            insertTag(this.dataset.username, inputType, popupEl);
+          };
+        });
+      } else {
+        popupEl.classList.remove('show');
+      }
+    } else {
+      isTagging = false;
+      popupEl.classList.remove('show');
+    }
   }
 
-  composeInput.addEventListener('input', updateCompose);
-
-  composeInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey && composeInput.value.trim().length > 0) {
-      e.preventDefault();
-      postBtn.click();
+  function insertTag(username, inputType, popupEl) {
+    popupEl.classList.remove('show');
+    if (inputType === 'compose') {
+      composeInput.focus();
+      var sel = window.getSelection();
+      var range = sel.getRangeAt(0);
+      
+      var textNode = range.startContainer;
+      var text = textNode.nodeValue;
+      var cursorPos = range.startOffset;
+      var beforeCursor = text.substring(0, cursorPos);
+      var match = beforeCursor.match(/@([a-zA-Z0-9._]*)$/);
+      if (match) {
+        var startIdx = cursorPos - match[0].length;
+        textNode.nodeValue = text.substring(0, startIdx) + '@' + username + ' ' + text.substring(cursorPos);
+        range.setStart(textNode, startIdx + username.length + 2);
+        range.setEnd(textNode, startIdx + username.length + 2);
+      }
+      updateCompose();
+    } else {
+      commentInput.focus();
+      var text = commentInput.value;
+      var cursorPos = commentInput.selectionStart;
+      var beforeCursor = text.substring(0, cursorPos);
+      var match = beforeCursor.match(/@([a-zA-Z0-9._]*)$/);
+      if (match) {
+        var startIdx = cursorPos - match[0].length;
+        var newVal = text.substring(0, startIdx) + '@' + username + ' ' + text.substring(cursorPos);
+        commentInput.value = newVal;
+        commentInput.setSelectionRange(startIdx + username.length + 2, startIdx + username.length + 2);
+      }
+      updatePostCommentBtn();
     }
-  });
+    isTagging = false;
+  }
 
-  postBtn.addEventListener('click', async function() {
-    var text = composeInput.value.trim();
-    if (!text || !supabase || !currentUser) return;
+  composeInput.addEventListener('input', function(e) { updateCompose(); handleTagInput(e, 'compose', composeTagPopup); });
+  composeInput.addEventListener('click', function(e) { handleTagInput(e, 'compose', composeTagPopup); });
+  commentInput.addEventListener('input', function(e) { updatePostCommentBtn(); handleTagInput(e, 'comment', commentTagPopup); });
+  commentInput.addEventListener('click', function(e) { handleTagInput(e, 'comment', commentTagPopup); });
 
-    postBtn.classList.remove('active');
-    postBtn.textContent = 'Posting...';
+  // ============ POSTS ============
 
-    var result = await supabase.from('posts').insert({
-      username: currentUser.username,
-      text: text
-    }).select().single();
-
-    if (result.error) {
-      console.error(result.error);
-      showToast('Could not post: ' + result.error.message, true);
-      postBtn.classList.add('active');
-      postBtn.textContent = 'Post';
-      return;
-    }
-
-    composeInput.value = '';
-    updateCompose();
-    postBtn.textContent = 'Post';
-
-    await loadFeed();
-    showToast('Posted!');
-  });
-
-  // ===== FEED =====
-  async function loadFeed() {
-    if (!supabase) {
-      feed.innerHTML = '<div class="empty-feed"><span class="big">⚠️</span><p>Database not connected.</p></div>';
-      return;
-    }
-
-    var result = await supabase
-      .from('posts')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50);
-
-    if (result.error) {
-      console.error(result.error);
-      feed.innerHTML = '<div class="empty-feed"><span class="big">⚠️</span><p>Could not load posts.</p><p style="font-size:12px;opacity:.7">' + escapeHtml(result.error.message) + '</p></div>';
-      return;
-    }
-
+  async function loadFeed(targetPostId) {
+    if (!supabase) return;
+    var result = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(50);
+    if (result.error) return;
     var posts = result.data || [];
     if (posts.length === 0) {
-      feed.innerHTML = '<div class="empty-feed"><span class="big">💬</span><p>No posts yet</p><p style="font-size:13px;opacity:.7">Be the first to say something.</p></div>';
+      feed.innerHTML = '<div class="empty-feed"><span class="big">💬</span><p>No posts yet</p></div>';
       return;
     }
+
+    posts.sort(function(a, b) {
+      if (a.username === currentUser.username && b.username === currentUser.username) {
+        if (a.is_pinned && !b.is_pinned) return -1;
+        if (!a.is_pinned && b.is_pinned) return 1;
+      }
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+
+    var usernames = {}; posts.forEach(function(p) { usernames[p.username] = true; });
+    var profilesRes = await supabase.from('profiles').select('username, emoji').in('username', Object.keys(usernames));
+    var profileMap = {}; (profilesRes.data || []).forEach(function(p) { profileMap[p.username] = p; });
 
     for (var i = 0; i < posts.length; i++) {
       var p = posts[i];
-
-      var likesRes = await supabase
-        .from('post_likes')
-        .select('username')
-        .eq('post_id', p.id);
+      p._avatar = (profileMap[p.username] && profileMap[p.username].emoji) || '♥️';
+      
+      var likesRes = await supabase.from('post_likes').select('username').eq('post_id', p.id);
       p._likes = likesRes.data || [];
       p.liked = p._likes.some(function(l) { return l.username === currentUser.username; });
       p.likesCount = p._likes.length;
-
-      var commentsRes = await supabase
-        .from('post_comments')
-        .select('*')
-        .eq('post_id', p.id)
-        .order('created_at', { ascending: true });
+      
+      var commentsRes = await supabase.from('post_comments').select('*').eq('post_id', p.id).order('created_at', { ascending: true });
       p._comments = commentsRes.data || [];
+      
+      if (p._comments.length > 0) {
+        var commentIds = p._comments.map(function(c) { return c.id; });
+        var cLikesRes = await supabase.from('comment_likes').select('comment_id, username').in('comment_id', commentIds);
+        var cLikes = cLikesRes.data || [];
+        p._comments.forEach(function(c) {
+          var mine = cLikes.filter(function(cl) { return cl.comment_id === c.id; });
+          c.likesCount = mine.length;
+          c.liked = mine.some(function(cl) { return cl.username === currentUser.username; });
+        });
+      }
     }
-
+    
+    window.currentFeedPosts = posts;
     renderFeed(posts);
+
+    if (targetPostId) {
+      var el = feed.querySelector('.post[data-post-id="' + targetPostId + '"]');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('highlight');
+        setTimeout(function(){ el.classList.remove('highlight'); }, 2000);
+      }
+    }
   }
 
   function renderFeed(posts) {
     feed.innerHTML = '';
-
     posts.forEach(function(p) {
       var el = document.createElement('div');
       el.className = 'post';
       el.dataset.postId = p.id;
+      
+      var isMe = p.username === currentUser.username;
+      
+      var pinHtml = '';
+      if (isMe) {
+        pinHtml = '<button class="post-action pin-btn' + (p.is_pinned ? ' pinned' : '') + '" data-action="pin-post" data-id="' + p.id + '" title="Pin post">📌</button>';
+      }
+      
+      var deleteBtn = isMe ? '<button class="post-delete-btn" data-action="delete-post" data-id="' + p.id + '">🗑️</button>' : '';
 
-      var likeIcon = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
-      var commentIcon = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+      var authorBadge = '';
+      if (p.is_pinned) authorBadge += ' <span class="badge-tag badge-pin">Pinned</span>';
 
       el.innerHTML =
-        avatarHtml(p.username, 40) +
+        '<div class="post-avatar" data-action="profile" data-target="' + escapeHtml(p.username) + '">' + p._avatar + '</div>' +
         '<div class="post-body">' +
           '<div class="post-header">' +
-            '<span class="post-username">@' + escapeHtml(p.username) + '</span>' +
+            '<span class="post-username" data-action="profile" data-target="' + escapeHtml(p.username) + '">' + escapeHtml(p.username) + '</span>' +
+            authorBadge +
             '<span class="post-time">· ' + timeAgo(p.created_at) + '</span>' +
+            deleteBtn +
           '</div>' +
-          '<div class="post-text">' + escapeHtml(p.text) + '</div>' +
+          '<div class="post-text">' + renderFormatted(p.text) + '</div>' +
           '<div class="post-actions">' +
             '<button class="post-action like-btn' + (p.liked ? ' liked' : '') + '" data-action="like" data-id="' + p.id + '">' +
-              likeIcon + '<span class="like-count">' + p.likesCount + '</span>' +
+              '❤️ <span class="like-count">' + p.likesCount + '</span>' +
             '</button>' +
             '<button class="post-action comment-btn" data-action="comment" data-id="' + p.id + '">' +
-              commentIcon + '<span class="comment-count">' + p._comments.length + '</span>' +
+              '💬 <span class="comment-count">' + p._comments.length + '</span>' +
             '</button>' +
+            pinHtml +
           '</div>' +
         '</div>';
-
       feed.appendChild(el);
     });
 
-    attachFeedEvents(posts);
-  }
-
-  function attachFeedEvents(posts) {
     feed.onclick = async function(e) {
       var btn = e.target.closest('[data-action]');
       if (!btn) return;
       e.stopPropagation();
-
       var action = btn.dataset.action;
       var id = btn.dataset.id;
+      var target = btn.dataset.target;
       var p = posts.find(function(x) { return String(x.id) === String(id); });
+
+      if (action === 'profile') { openProfile(target); return; }
       if (!p) return;
 
-      if (action === 'like') {
-        await toggleLike(p, btn);
-      } else if (action === 'comment') {
-        openComments(p);
+      if (action === 'like') await toggleLike(p, btn);
+      else if (action === 'comment') openComments(p);
+      else if (action === 'delete-post') {
+        showConfirm('Delete post?', 'This post will be deleted permanently.', 'Delete', async function() {
+          await supabase.from('posts').delete().eq('id', p.id);
+          await loadFeed();
+        });
+      } else if (action === 'pin-post') {
+        if (p.is_pinned) {
+           await supabase.from('posts').update({ is_pinned: false }).eq('id', p.id);
+        } else {
+           var curPinned = posts.filter(function(x){ return x.username === currentUser.username && x.is_pinned; }).length;
+           if (curPinned >= 4) { showToast('You can only pin up to 4 posts', true); return; }
+           await supabase.from('posts').update({ is_pinned: true }).eq('id', p.id);
+        }
+        await loadFeed();
       }
     };
   }
 
   async function toggleLike(p, btn) {
     if (!supabase || !currentUser) return;
-
     if (p.liked) {
-      var del = await supabase
-        .from('post_likes')
-        .delete()
-        .eq('post_id', p.id)
-        .eq('username', currentUser.username);
-      if (del.error) { console.error(del.error); showToast('Could not unlike', true); return; }
-      p.liked = false;
-      p.likesCount = Math.max(0, p.likesCount - 1);
+      await supabase.from('post_likes').delete().eq('post_id', p.id).eq('username', currentUser.username);
+      p.liked = false; p.likesCount--;
     } else {
-      var ins = await supabase
-        .from('post_likes')
-        .insert({ post_id: p.id, username: currentUser.username });
-      if (ins.error) { console.error(ins.error); showToast('Could not like', true); return; }
-      p.liked = true;
-      p.likesCount += 1;
+      await supabase.from('post_likes').insert({ post_id: p.id, username: currentUser.username });
+      p.liked = true; p.likesCount++;
+      await createNotification(p.username, 'like', p.id);
     }
-
     btn.classList.toggle('liked', p.liked);
     btn.querySelector('.like-count').textContent = p.likesCount;
   }
 
-  // ===== COMMENTS =====
+  // ============ COMMENTS ============
   function openComments(p) {
     currentPost = p;
-
+    replyingTo = null;
+    replyBanner.classList.remove('visible');
     sheetOrigin.style.display = 'flex';
-    soAvatar.outerHTML = avatarHtml(p.username, 32).replace('style="', 'id="soAvatar" style="');
-    soAvatar = document.getElementById('soAvatar');
-    soUsername.textContent = '@' + p.username;
-    soText.textContent = p.text;
-
+    soAvatar.textContent = p._avatar;
+    soUsername.textContent = p.username;
+    soText.innerHTML = renderFormatted(p.text);
     renderComments(p);
-    sheetBackdrop.classList.add('open');
-    sheet.classList.add('open');
+    sheetBackdrop.classList.add('open'); sheet.classList.add('open');
     commentInput.value = '';
     updatePostCommentBtn();
   }
 
   function closeCommentsSheet() {
-    sheetBackdrop.classList.remove('open');
-    sheet.classList.remove('open');
-    currentPost = null;
+    sheetBackdrop.classList.remove('open'); sheet.classList.remove('open');
+    currentPost = null; replyingTo = null;
+    replyBanner.classList.remove('visible');
   }
 
-  function renderComments(p) {
+  async function renderComments(p) {
     commentsList.innerHTML = '';
-
     if (!p._comments || p._comments.length === 0) {
-      commentsList.innerHTML = '<div class="empty-comments"><span class="emoji">💬</span><p>No comments yet</p><p style="font-size:12px;opacity:.7">Start the conversation.</p></div>';
+      commentsList.innerHTML = '<div class="empty-comments"><p>No comments yet</p></div>';
       return;
     }
-
-    p._comments.forEach(function(c) {
-      var el = document.createElement('div');
-      el.className = 'comment';
-
-      el.innerHTML =
-        avatarHtml(c.username, 32) +
-        '<div class="comment-body">' +
-          '<div class="comment-username">@' + escapeHtml(c.username) + '</div>' +
-          '<div class="comment-text">' + escapeHtml(c.text) + '</div>' +
-          '<div class="comment-meta">' + timeAgo(c.created_at) + '</div>' +
-        '</div>';
-
-      commentsList.appendChild(el);
+    var parents = p._comments.filter(function(c) { return !c.parent_id; });
+    var replies = p._comments.filter(function(c) { return c.parent_id; });
+    
+    parents.sort(function(a, b) {
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+      return new Date(a.created_at) - new Date(b.created_at);
     });
 
-    commentsList.scrollTop = commentsList.scrollHeight;
+    var commenterNames = {}; p._comments.forEach(function(c) { commenterNames[c.username] = true; });
+    var pRes = await supabase.from('profiles').select('username, emoji').in('username', Object.keys(commenterNames));
+    var map = {}; (pRes.data || []).forEach(function(pr) { map[pr.username] = pr.emoji; });
+
+    function renderOne(c, isReply) {
+      var el = document.createElement('div');
+      el.className = 'comment' + (isReply ? ' reply' : '');
+      var replyToHtml = c.reply_to_username ? ' <span class="reply-to">→ ' + escapeHtml(c.reply_to_username) + '</span>' : '';
+      
+      var isMine = c.username === currentUser.username;
+      var isPostAuthor = currentUser.username === p.username;
+      
+      var authorBadge = '';
+      if (isMine) authorBadge = '<span class="badge-tag badge-author">Author</span>'; 
+      
+      var pinBtn = '';
+      if (isPostAuthor) {
+        pinBtn = '<button class="comment-btn pin-comment-btn' + (c.is_pinned ? ' pinned' : '') + '" data-cid="' + c.id + '">📌</button>';
+      }
+      
+      var deleteBtn = isMine ? '<button class="comment-btn comment-delete-btn" data-cid="' + c.id + '">Delete</button>' : '';
+      var repliesCount = 0;
+      if (!isReply) repliesCount = replies.filter(function(r) { return r.parent_id === c.id; }).length;
+      var toggleBtn = '';
+      if (repliesCount > 0) {
+        var isCollapsed = !!collapsedReplies[c.id];
+        toggleBtn = '<button class="comment-btn toggle-replies-btn" data-toggle-cid="' + c.id + '">' +
+          (isCollapsed ? 'Show ' + repliesCount + ' replies' : 'Hide replies') + '</button>';
+      }
+
+      el.innerHTML =
+        '<div class="comment-avatar">' + (map[c.username] || '♥️') + '</div>' +
+        '<div class="comment-body">' +
+          '<div class="comment-username">' + escapeHtml(c.username) + replyToHtml + authorBadge + '</div>' +
+          '<div class="comment-text">' + renderFormatted(c.text) + '</div>' +
+          '<div class="comment-meta">' +
+            '<span>' + timeAgo(c.created_at) + '</span>' +
+            '<button class="comment-btn comment-like-btn' + (c.liked ? ' liked' : '') + '" data-cid="' + c.id + '">' +
+              '❤️ <span class="cl-count">' + (c.likesCount || 0) + '</span>' +
+            '</button>' +
+            '<button class="comment-btn comment-reply-btn" data-cid="' + c.id + '" data-cuname="' + escapeHtml(c.username) + '">Reply</button>' +
+            toggleBtn +
+            pinBtn +
+            deleteBtn +
+          '</div>' +
+        '</div>';
+      commentsList.appendChild(el);
+
+      el.querySelector('.comment-like-btn').addEventListener('click', async function() {
+        var cc = p._comments.find(function(x) { return String(x.id) === String(this.dataset.cid); }.bind(this));
+        if (cc.liked) {
+          await supabase.from('comment_likes').delete().eq('comment_id', cc.id).eq('username', currentUser.username);
+          cc.liked = false; cc.likesCount--;
+        } else {
+          await supabase.from('comment_likes').insert({ comment_id: cc.id, username: currentUser.username });
+          cc.liked = true; cc.likesCount++;
+          await createNotification(cc.username, 'like', p.id);
+        }
+        this.classList.toggle('liked', cc.liked);
+        this.querySelector('.cl-count').textContent = cc.likesCount;
+      });
+
+      el.querySelector('.comment-reply-btn').addEventListener('click', function() {
+        replyingTo = { commentId: this.dataset.cid, username: this.dataset.cuname };
+        replyToName.textContent = this.dataset.cuname;
+        replyBanner.classList.add('visible');
+        commentInput.focus();
+      });
+
+      if (toggleBtn) {
+        el.querySelector('.toggle-replies-btn').addEventListener('click', function() {
+          var pid = this.dataset.toggleCid;
+          if (collapsedReplies[pid]) delete collapsedReplies[pid];
+          else collapsedReplies[pid] = true;
+          renderComments(p);
+        });
+      }
+
+      if (pinBtn) {
+        el.querySelector('.pin-comment-btn').addEventListener('click', async function() {
+          var cid = this.dataset.cid;
+          var cc = p._comments.find(function(x) { return String(x.id) === String(cid); });
+          if (cc.is_pinned) {
+            await supabase.from('post_comments').update({ is_pinned: false }).eq('id', cc.id);
+            cc.is_pinned = false;
+          } else {
+            var curPinned = p._comments.filter(function(x){ return x.is_pinned; }).length;
+            if (curPinned >= 4) { showToast('Max 4 pinned comments', true); return; }
+            await supabase.from('post_comments').update({ is_pinned: true }).eq('id', cc.id);
+            cc.is_pinned = true;
+          }
+          renderComments(p);
+        });
+      }
+
+      if (isMine) {
+        el.querySelector('.comment-delete-btn').addEventListener('click', function() {
+          var cid = this.dataset.cid;
+          showConfirm('Delete comment?', 'This comment will be removed.', 'Delete', async function() {
+            await supabase.from('post_comments').delete().eq('parent_id', cid);
+            await supabase.from('post_comments').delete().eq('id', cid);
+            p._comments = p._comments.filter(function(x) { return String(x.id) !== String(cid) && String(x.parent_id) !== String(cid); });
+            await renderComments(p);
+          });
+        });
+      }
+    }
+
+    parents.forEach(function(c) {
+      renderOne(c, false);
+      if (!collapsedReplies[c.id]) {
+        replies.filter(function(r) { return r.parent_id === c.id; }).forEach(function(r) { renderOne(r, true); });
+      }
+    });
   }
 
   function updatePostCommentBtn() {
@@ -787,66 +1213,175 @@
     postCommentBtn.classList.toggle('active', hasText && !!currentPost);
   }
 
-  commentInput.addEventListener('input', updatePostCommentBtn);
-  commentInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      postCommentBtn.click();
-    }
-  });
-
   postCommentBtn.addEventListener('click', async function() {
     var text = commentInput.value.trim();
     if (!text || !currentPost || !supabase || !currentUser) return;
-
     postCommentBtn.classList.remove('active');
-
-    var ins = await supabase.from('post_comments').insert({
-      post_id: currentPost.id,
-      username: currentUser.username,
-      text: text
-    }).select().single();
-
-    if (ins.error) {
-      console.error(ins.error);
-      showToast('Could not comment: ' + ins.error.message, true);
-      postCommentBtn.classList.add('active');
-      return;
+    
+    var payload = { post_id: currentPost.id, username: currentUser.username, text: text };
+    if (replyingTo) {
+      payload.parent_id = replyingTo.commentId;
+      payload.reply_to_username = replyingTo.username;
     }
-
+    
+    var ins = await supabase.from('post_comments').insert(payload).select().single();
+    if (ins.error) { showToast('Could not comment', true); return; }
+    
+    ins.data.likesCount = 0; ins.data.liked = false; ins.data.is_pinned = false;
     currentPost._comments.push(ins.data);
     commentInput.value = '';
     updatePostCommentBtn();
-    renderComments(currentPost);
-
-    var postEl = feed.querySelector('.post[data-post-id="' + currentPost.id + '"]');
-    if (postEl) {
-      var countEl = postEl.querySelector('.comment-count');
-      if (countEl) countEl.textContent = currentPost._comments.length;
-    }
-
-    showToast('Comment added');
+    
+    if (replyingTo) await createNotification(replyingTo.username, 'reply', currentPost.id);
+    else await createNotification(currentPost.username, 'comment', currentPost.id);
+    
+    replyingTo = null;
+    replyBanner.classList.remove('visible');
+    await renderComments(currentPost);
   });
 
-  closeSheet.addEventListener('click', closeCommentsSheet);
-  sheetBackdrop.addEventListener('click', closeCommentsSheet);
-
-  // ===== INIT =====
-  function init() {
-    var saved = localStorage.getItem('onechat_user');
-    if (saved) {
-      try {
-        currentUser = JSON.parse(saved);
-        finishAuth();
-        return;
-      } catch (e) {
-        localStorage.removeItem('onechat_user');
-      }
-    }
-    updateAvatarPreview();
-    setTimeout(function() { usernameInput.focus(); }, 200);
+  // ============ COMPOSE POST ============
+  function updateCompose() {
+    var text = composeInput.innerText || '';
+    if (text.endsWith('\n')) text = text.slice(0, -1);
+    charCount.textContent = text.length + '/280';
+    charCount.classList.toggle('warn', 280 - text.length < 20);
+    postBtn.classList.toggle('active', text.length > 0 && text.length <= 280);
+    composeInput.style.height = 'auto';
+    composeInput.style.height = Math.min(composeInput.scrollHeight, 140) + 'px';
   }
 
+  // Fixed format buttons
+  document.querySelectorAll('.fmt-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      document.execCommand(this.dataset.fmt, false, null);
+      composeInput.focus();
+    });
+  });
+
+  postBtn.addEventListener('click', async function() {
+    var htmlText = composeInput.innerHTML.trim();
+    if (!htmlText || !supabase || !currentUser) return;
+    
+    postBtn.classList.remove('active'); postBtn.textContent = '...';
+    var result = await supabase.from('posts').insert({ username: currentUser.username, text: htmlText }).select().single();
+    
+    if (result.error) { showToast('Could not post', true); postBtn.classList.add('active'); postBtn.textContent = 'Post'; return; }
+    composeInput.innerHTML = '';
+    updateCompose();
+    postBtn.textContent = 'Post';
+    await loadFeed();
+  });
+
+  // ============ NOTIFICATIONS DEEP LINKING ============
+  async function loadNotifCount() {
+    if (!supabase || !currentUser) return;
+    var res = await supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_to', currentUser.username).eq('read', false);
+    notifUnread = res.count || 0;
+    notifBadge.style.display = notifUnread > 0 ? 'flex' : 'none';
+    if (notifUnread > 0) notifBadge.textContent = notifUnread > 99 ? '99+' : String(notifUnread);
+  }
+
+  notifBtn.addEventListener('click', async function() { 
+    notifPage.classList.add('open'); 
+    if (!supabase) return;
+    notifBody.innerHTML = '<div class="loading-feed">Loading...</div>';
+    var res = await supabase.from('notifications').select('*').eq('user_to', currentUser.username).order('created_at', { ascending: false }).limit(50);
+    if (!res.data || res.data.length === 0) {
+      notifBody.innerHTML = '<div class="notif-empty">No notifications yet</div>';
+      return;
+    }
+    var actors = {}; res.data.forEach(function(n) { actors[n.user_from] = true; });
+    var pRes = await supabase.from('profiles').select('username, emoji').in('username', Object.keys(actors));
+    var map = {}; (pRes.data || []).forEach(function(p) { map[p.username] = p.emoji; });
+
+    notifBody.innerHTML = '';
+    res.data.forEach(function(n) {
+      var el = document.createElement('div');
+      el.className = 'notif-item' + (n.read ? '' : ' unread');
+      var text = '';
+      if (n.type === 'like') text = '<b>' + escapeHtml(n.user_from) + '</b> liked your post';
+      else if (n.type === 'comment') text = '<b>' + escapeHtml(n.user_from) + '</b> commented on your post';
+      else if (n.type === 'reply') text = '<b>' + escapeHtml(n.user_from) + '</b> replied to your comment';
+      
+      el.innerHTML =
+        '<div class="avatar">' + (map[n.user_from] || '♥️') + '</div>' +
+        '<div class="body">' +
+          '<div class="text">' + text + '</div>' +
+          '<div class="time">' + timeAgo(n.created_at) + '</div>' +
+        '</div>' +
+        (n.read ? '' : '<div class="dot"></div>');
+
+      el.addEventListener('click', async function() {
+        if (!n.read) {
+          await supabase.from('notifications').update({ read: true }).eq('id', n.id);
+          loadNotifCount();
+        }
+        notifPage.classList.remove('open');
+        if (n.post_id) {
+          await loadFeed(n.post_id);
+        }
+      });
+      notifBody.appendChild(el);
+    });
+  });
+
+  markAllRead.addEventListener('click', async function() {
+    await supabase.from('notifications').update({ read: true }).eq('user_to', currentUser.username).eq('read', false);
+    loadNotifCount(); notifPage.classList.remove('open');
+  });
+  notifBack.addEventListener('click', function() { notifPage.classList.remove('open'); });
+
+  async function createNotification(toUser, type, postId) {
+    if (!supabase || !currentUser || toUser === currentUser.username) return;
+    await supabase.from('notifications').insert({ user_to: toUser, user_from: currentUser.username, type: type, post_id: postId || null });
+  }
+
+  // ============ NAVIGATION & AUTH INIT ============
+  userChip.addEventListener('click', function() { if (currentUser) openProfile(currentUser.username); });
+  searchBtn.addEventListener('click', function() { searchPage.classList.add('open'); searchInput.focus(); });
+  searchBack.addEventListener('click', function() { searchPage.classList.remove('open'); });
+  settingsBtn.addEventListener('click', function() { settingsPage.classList.add('open'); });
+  settingsBack.addEventListener('click', function() { settingsPage.classList.remove('open'); });
+  profileBack.addEventListener('click', function() { profilePage.classList.remove('open'); viewingProfile = null; });
+
+  function openProfile(username) {
+    if (!username || !supabase) return;
+    viewingProfile = username;
+    profilePage.classList.add('open');
+    profileTitle.textContent = username;
+    profileUsername.textContent = username;
+    profileRealName.textContent = '';
+    profileMeta.textContent = '';
+    deleteAccountBtn.style.display = (username === currentUser.username) ? 'block' : 'none';
+    
+    supabase.from('profiles').select('*').eq('username', username).maybeSingle().then(function(res) {
+      var p = res.data || { emoji: '♥️' };
+      profileEmoji.textContent = p.emoji;
+      profileRealName.textContent = p.name || '';
+      profileMeta.textContent = [p.country, p.gender].filter(Boolean).join(' · ');
+    });
+    
+    supabase.from('posts').select('*').eq('username', username).order('created_at', { ascending: false }).limit(20).then(function(res) {
+      var posts = res.data || [];
+      var html = '';
+      posts.forEach(function(p) {
+        html += '<div class="post"><div class="post-body"><div class="post-text">' + renderFormatted(p.text) + '</div></div></div>';
+      });
+      profilePosts.innerHTML = html || '<div class="empty-feed">No posts</div>';
+    });
+  }
+
+  // INIT
+  function init() {
+    buildEmojiRow(regEmojiRow, selectedEmoji, function(e) { selectedEmoji = e; regAvatarPreview.textContent = e; });
+    var saved = localStorage.getItem('onechat_user');
+    if (saved) {
+      try { currentUser = JSON.parse(saved); finishAuth(); return; } catch (e) { localStorage.removeItem('onechat_user'); }
+    }
+    loginUsername.focus();
+  }
   init();
 })();
 </script>
