@@ -122,7 +122,7 @@
   .post { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; gap:12px; animation:fadeIn .25s ease; position:relative; transition:background 0.5s; }
   @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
   .post.highlight { background:rgba(0,149,246,.15); }
-  .post.interested { background: rgba(0,149,246, 0.05); } /* Subtle highlight for interested */
+  .post.interested { background: rgba(0,149,246, 0.05); }
   .post-avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; background:var(--surface-2); cursor:pointer; }
   .post-body { flex:1; min-width:0; }
   .post-header { display:flex; align-items:center; gap:6px; margin-bottom:2px; flex-wrap:wrap; }
@@ -141,6 +141,7 @@
   .badge-author { background:rgba(0,149,246,.15); color:var(--blue); border:1px solid rgba(0,149,246,.3); }
   .badge-pin { background:rgba(245,158,11,.15); color:var(--pin-color); border:1px solid rgba(245,158,11,.3); }
   .badge-interested { background:rgba(0,149,246,.15); color:var(--blue); border:1px solid rgba(0,149,246,.3); }
+  .badge-top-fan { background:rgba(139,92,246,.15); color:var(--purple); border:1px solid rgba(139,92,246,.3); }
 
   /* Actions */
   .post-actions { display:flex; gap:24px; align-items:center; margin-top:8px; }
@@ -349,6 +350,13 @@
   .sheet-header { display:flex; align-items:center; justify-content:space-between; padding:8px 16px 12px; border-bottom:1px solid var(--border); flex-shrink:0; }
   .sheet-header h3 { font-size:15px; font-weight:600; }
   .sheet-header button { background:none; border:none; color:var(--muted); font-size:22px; cursor:pointer; line-height:1; padding:0 4px; }
+  
+  /* Comment Sorting */
+  .comment-sort-bar { display:flex; gap:12px; padding:10px 16px; border-bottom:1px solid var(--border); flex-shrink:0; background:var(--sheet-bg); overflow-x:auto; scrollbar-width:none; }
+  .comment-sort-bar::-webkit-scrollbar { display:none; }
+  .sort-btn { background:none; border:none; color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; padding:4px 8px; border-radius:6px; transition:all .15s; white-space:nowrap; }
+  .sort-btn.active { background:var(--surface-2); color:var(--text); }
+
   .sheet-origin { padding:10px 16px; border-bottom:1px solid var(--border); display:flex; gap:10px; flex-shrink:0; background:var(--surface-2); }
   .sheet-origin .post-avatar { width:32px; height:32px; font-size:18px; }
   .sheet-origin .so-body { flex:1; min-width:0; }
@@ -665,7 +673,7 @@
       
       <div class="faq-item">
         <div class="faq-q">What is a "Top Fan"? <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
-        <div class="faq-a">A Top Fan is the user who has commented the most times on a specific post. They're highlighted in purple below the post.</div>
+        <div class="faq-a">A Top Fan is the user who has commented the most times on a specific post. They get a purple badge in the comments and are highlighted below the post.</div>
       </div>
       
       <div class="faq-item">
@@ -773,6 +781,14 @@
     <h3>Comments</h3>
     <button id="closeSheet" type="button">✕</button>
   </div>
+  
+  <div class="comment-sort-bar">
+    <button class="sort-btn active" data-sort="relevant">Most Relevant</button>
+    <button class="sort-btn" data-sort="new">New</button>
+    <button class="sort-btn" data-sort="old">Old</button>
+    <button class="sort-btn" data-sort="popular">Popular</button>
+  </div>
+
   <div class="sheet-origin" id="sheetOrigin" style="display:none;">
     <div class="post-avatar" id="soAvatar">U</div>
     <div class="so-body">
@@ -985,6 +1001,7 @@
   
   var isTagging = false;
   var tagQuery = '';
+  var currentCommentSort = 'relevant'; // 'relevant', 'new', 'old', 'popular'
   
   var currentChatUser = null;
   var currentConversationId = null;
@@ -1684,7 +1701,6 @@
     if (result.error) { console.error(result.error); return; }
     var posts = result.data || [];
     
-    // Filter out "Not Interested" posts from local storage
     var notInterestedIds = JSON.parse(localStorage.getItem('onechat_not_interested') || '[]');
     posts = posts.filter(function(p) { return !notInterestedIds.includes(String(p.id)); });
 
@@ -1705,7 +1721,6 @@
     var profilesRes = await supabase.from('profiles').select('username, emoji').in('username', Object.keys(usernames));
     var profileMap = {}; (profilesRes.data || []).forEach(function(p) { profileMap[p.username] = p; });
 
-    // Get all my following to show status inline
     var meFollowRes = await supabase.from('follows').select('following').eq('follower', currentUser.username);
     var iFollowSet = new Set((meFollowRes.data || []).map(function(f) { return f.following; }));
 
@@ -1746,10 +1761,152 @@
     }
   }
 
-  // Local storage for interested posts
   function isInterested(postId) {
     var intIds = JSON.parse(localStorage.getItem('onechat_interested') || '[]');
     return intIds.includes(String(postId));
+  }
+
+  function createPostHTML(p, isMe) {
+    var authorBadge = '';
+    if (p.is_pinned) authorBadge += ' <span class="badge-tag badge-pin">Pinned</span>';
+    if (isInterested(p.id)) authorBadge += ' <span class="badge-tag badge-interested">🔥 Interested</span>';
+
+    var bgStyle = p.bg_color ? 'style="background-color:' + p.bg_color + ';"' : '';
+
+    // Find Top Fan
+    var topFan = null;
+    var fanCounts = {};
+    p._comments.forEach(function(c) {
+      if (c.username !== p.username) {
+        fanCounts[c.username] = (fanCounts[c.username] || 0) + 1;
+      }
+    });
+    var max = 0;
+    for (var u in fanCounts) {
+      if (fanCounts[u] > max) { max = fanCounts[u]; topFan = u; }
+    }
+
+    // Follow button for feed
+    var followBtnHtml = '';
+    if (!isMe) {
+      followBtnHtml = '<button class="feed-follow-btn' + (p._isFollowing ? ' following' : '') + '" data-follow-user="' + escapeHtml(p.username) + '">' + (p._isFollowing ? 'Following' : 'Follow') + '</button>';
+    }
+
+    return '<div class="post-avatar" data-action="profile" data-target="' + escapeHtml(p.username) + '">' + p._avatar + '</div>' +
+      '<div class="post-body">' +
+        '<div class="post-header">' +
+          '<span class="post-username" data-action="profile" data-target="' + escapeHtml(p.username) + '">' + escapeHtml(p.username) + '</span>' +
+          followBtnHtml +
+          authorBadge +
+          '<span class="post-time">· ' + timeAgo(p.created_at) + '</span>' +
+          '<button class="post-menu-btn" data-action="menu" data-id="' + p.id + '">⋮</button>' +
+          '<div class="post-dropdown" id="dropdown-' + p.id + '">' +
+            (isMe ? '<button class="dropdown-item danger" data-action="delete-post" data-id="' + p.id + '">Delete post</button>' : '') +
+            (isMe ? '<button class="dropdown-item" data-action="pin-post" data-id="' + p.id + '">' + (p.is_pinned ? 'Unpin post' : 'Pin post') + '</button>' : '') +
+            '<button class="dropdown-item" data-action="interested" data-id="' + p.id + '">Interested</button>' +
+            '<button class="dropdown-item" data-action="not-interested" data-id="' + p.id + '">Not interested</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="post-bg" ' + bgStyle + '>' +
+          '<div class="post-text">' + renderFormatted(p.text) + '</div>' +
+        '</div>' +
+        '<div class="post-actions">' +
+          '<button class="post-action like-btn' + (p.liked ? ' liked' : '') + '" data-action="like" data-id="' + p.id + '">' +
+            '❤️ <span class="like-count">' + p.likesCount + '</span>' +
+          '</button>' +
+          '<button class="post-action comment-btn" data-action="comment" data-id="' + p.id + '">' +
+            '💬 <span class="comment-count">' + p._comments.length + '</span>' +
+          '</button>' +
+        '</div>' +
+        (topFan ? '<div style="font-size:11px;color:var(--purple);font-weight:700;margin-top:6px;">⭐ Top Fan: @' + escapeHtml(topFan) + '</div>' : '');
+  }
+
+  // Global handler for post clicks (works for both feed and profile)
+  async function handlePostClick(e, postsList) {
+    // Handle Follow button click specifically
+    var followBtn = e.target.closest('.feed-follow-btn');
+    if (followBtn) {
+      e.stopPropagation();
+      followBtn.disabled = true;
+      var uname = followBtn.dataset.followUser;
+      var followed = await toggleFollow(uname, followBtn);
+      followBtn.disabled = false;
+      followBtn.textContent = followed ? 'Following' : 'Follow';
+      followBtn.classList.toggle('following', followed);
+      return;
+    }
+
+    // Handle 3 dots menu
+    var menuBtn = e.target.closest('[data-action="menu"]');
+    if (menuBtn) {
+      e.stopPropagation();
+      var dropdown = menuBtn.nextElementSibling;
+      // Close other dropdowns
+      document.querySelectorAll('.post-dropdown.show').forEach(function(d) {
+        if (d !== dropdown) d.classList.remove('show');
+      });
+      dropdown.classList.toggle('show');
+      return;
+    }
+
+    var btn = e.target.closest('[data-action]');
+    if (!btn) {
+      // Close dropdowns when clicking outside
+      document.querySelectorAll('.post-dropdown.show').forEach(function(d) { d.classList.remove('show'); });
+      return;
+    }
+    e.stopPropagation();
+    
+    var action = btn.dataset.action;
+    var id = btn.dataset.id;
+    var target = btn.dataset.target;
+    var p = postsList.find(function(x) { return String(x.id) === String(id); });
+
+    if (action === 'profile') { openProfile(target); return; }
+    if (!p) return;
+
+    // Close the dropdown
+    var drp = document.getElementById('dropdown-' + p.id);
+    if (drp) drp.classList.remove('show');
+
+    if (action === 'like') await toggleLike(p, btn);
+    else if (action === 'comment') openComments(p);
+    else if (action === 'delete-post') {
+      showConfirm('Delete post?', 'This post will be deleted permanently.', 'Delete', async function() {
+        await supabase.from('posts').delete().eq('id', p.id);
+        if (viewingProfile) openProfile(viewingProfile); else loadFeed();
+      });
+    } 
+    else if (action === 'pin-post') {
+      if (p.is_pinned) {
+         await supabase.from('posts').update({ is_pinned: false }).eq('id', p.id);
+         showToast('Post unpinned');
+      } else {
+         var curPinned = postsList.filter(function(x){ return x.username === currentUser.username && x.is_pinned; }).length;
+         if (curPinned >= 4) { showToast('You can only pin up to 4 posts', true); return; }
+         await supabase.from('posts').update({ is_pinned: true }).eq('id', p.id);
+         showToast('Post pinned');
+      }
+      if (viewingProfile) openProfile(viewingProfile); else loadFeed();
+    }
+    else if (action === 'interested') {
+      var intIds = JSON.parse(localStorage.getItem('onechat_interested') || '[]');
+      if (!intIds.includes(String(p.id))) {
+        intIds.push(String(p.id));
+        localStorage.setItem('onechat_interested', JSON.stringify(intIds));
+      }
+      showToast('Marked as Interested 🔥');
+      if (viewingProfile) openProfile(viewingProfile); else loadFeed();
+    }
+    else if (action === 'not-interested') {
+      var notIds = JSON.parse(localStorage.getItem('onechat_not_interested') || '[]');
+      if (!notIds.includes(String(p.id))) {
+        notIds.push(String(p.id));
+        localStorage.setItem('onechat_not_interested', JSON.stringify(notIds));
+      }
+      showToast('Post hidden');
+      if (viewingProfile) openProfile(viewingProfile); else loadFeed();
+    }
   }
 
   function renderFeed(posts) {
@@ -1758,153 +1915,10 @@
       var el = document.createElement('div');
       el.className = 'post' + (isInterested(p.id) ? ' interested' : '');
       el.dataset.postId = p.id;
-      
-      var isMe = p.username === currentUser.username;
-      
-      var authorBadge = '';
-      if (p.is_pinned) authorBadge += ' <span class="badge-tag badge-pin">Pinned</span>';
-      if (isInterested(p.id)) authorBadge += ' <span class="badge-tag badge-interested">🔥 Interested</span>';
-
-      var bgStyle = p.bg_color ? 'style="background-color:' + p.bg_color + ';"' : '';
-
-      // Find Top Fan
-      var topFan = null;
-      var fanCounts = {};
-      p._comments.forEach(function(c) {
-        if (c.username !== p.username) {
-          fanCounts[c.username] = (fanCounts[c.username] || 0) + 1;
-        }
-      });
-      var max = 0;
-      for (var u in fanCounts) {
-        if (fanCounts[u] > max) { max = fanCounts[u]; topFan = u; }
-      }
-
-      // Follow button for feed
-      var followBtnHtml = '';
-      if (!isMe) {
-        followBtnHtml = '<button class="feed-follow-btn' + (p._isFollowing ? ' following' : '') + '" data-follow-user="' + escapeHtml(p.username) + '">' + (p._isFollowing ? 'Following' : 'Follow') + '</button>';
-      }
-
-      el.innerHTML =
-        '<div class="post-avatar" data-action="profile" data-target="' + escapeHtml(p.username) + '">' + p._avatar + '</div>' +
-        '<div class="post-body">' +
-          '<div class="post-header">' +
-            '<span class="post-username" data-action="profile" data-target="' + escapeHtml(p.username) + '">' + escapeHtml(p.username) + '</span>' +
-            followBtnHtml +
-            authorBadge +
-            '<span class="post-time">· ' + timeAgo(p.created_at) + '</span>' +
-            '<button class="post-menu-btn" data-action="menu" data-id="' + p.id + '">⋮</button>' +
-            '<div class="post-dropdown" id="dropdown-' + p.id + '">' +
-              (isMe ? '<button class="dropdown-item danger" data-action="delete-post" data-id="' + p.id + '">Delete post</button>' : '') +
-              (isMe ? '<button class="dropdown-item" data-action="pin-post" data-id="' + p.id + '">' + (p.is_pinned ? 'Unpin post' : 'Pin post') + '</button>' : '') +
-              '<button class="dropdown-item" data-action="interested" data-id="' + p.id + '">Interested</button>' +
-              '<button class="dropdown-item" data-action="not-interested" data-id="' + p.id + '">Not interested</button>' +
-            '</div>' +
-          '</div>' +
-          '<div class="post-bg" ' + bgStyle + '>' +
-            '<div class="post-text">' + renderFormatted(p.text) + '</div>' +
-          '</div>' +
-          '<div class="post-actions">' +
-            '<button class="post-action like-btn' + (p.liked ? ' liked' : '') + '" data-action="like" data-id="' + p.id + '">' +
-              '❤️ <span class="like-count">' + p.likesCount + '</span>' +
-            '</button>' +
-            '<button class="post-action comment-btn" data-action="comment" data-id="' + p.id + '">' +
-              '💬 <span class="comment-count">' + p._comments.length + '</span>' +
-            '</button>' +
-          '</div>' +
-          (topFan ? '<div style="font-size:11px;color:var(--purple);font-weight:700;margin-top:6px;">⭐ Top Fan: @' + escapeHtml(topFan) + '</div>' : '') +
-        '</div>';
+      el.innerHTML = createPostHTML(p, p.username === currentUser.username);
       feed.appendChild(el);
     });
-
-    // Handle clicks
-    feed.onclick = async function(e) {
-      // Handle Follow button click specifically
-      var followBtn = e.target.closest('.feed-follow-btn');
-      if (followBtn) {
-        e.stopPropagation();
-        followBtn.disabled = true;
-        var uname = followBtn.dataset.followUser;
-        var followed = await toggleFollow(uname, followBtn);
-        followBtn.disabled = false;
-        followBtn.textContent = followed ? 'Following' : 'Follow';
-        followBtn.classList.toggle('following', followed);
-        return;
-      }
-
-      // Handle 3 dots menu
-      var menuBtn = e.target.closest('[data-action="menu"]');
-      if (menuBtn) {
-        e.stopPropagation();
-        var dropdown = menuBtn.nextElementSibling;
-        // Close other dropdowns
-        document.querySelectorAll('.post-dropdown.show').forEach(function(d) {
-          if (d !== dropdown) d.classList.remove('show');
-        });
-        dropdown.classList.toggle('show');
-        return;
-      }
-
-      var btn = e.target.closest('[data-action]');
-      if (!btn) {
-        // Close dropdowns when clicking outside
-        document.querySelectorAll('.post-dropdown.show').forEach(function(d) { d.classList.remove('show'); });
-        return;
-      }
-      e.stopPropagation();
-      
-      var action = btn.dataset.action;
-      var id = btn.dataset.id;
-      var target = btn.dataset.target;
-      var p = posts.find(function(x) { return String(x.id) === String(id); });
-
-      if (action === 'profile') { openProfile(target); return; }
-      if (!p) return;
-
-      // Close the dropdown
-      var drp = document.getElementById('dropdown-' + p.id);
-      if (drp) drp.classList.remove('show');
-
-      if (action === 'like') await toggleLike(p, btn);
-      else if (action === 'comment') openComments(p);
-      else if (action === 'delete-post') {
-        showConfirm('Delete post?', 'This post will be deleted permanently.', 'Delete', async function() {
-          await supabase.from('posts').delete().eq('id', p.id);
-          await loadFeed();
-        });
-      } 
-      else if (action === 'pin-post') {
-        if (p.is_pinned) {
-           await supabase.from('posts').update({ is_pinned: false }).eq('id', p.id);
-           showToast('Post unpinned');
-        } else {
-           var curPinned = posts.filter(function(x){ return x.username === currentUser.username && x.is_pinned; }).length;
-           if (curPinned >= 4) { showToast('You can only pin up to 4 posts', true); return; }
-           await supabase.from('posts').update({ is_pinned: true }).eq('id', p.id);
-           showToast('Post pinned');
-        }
-        await loadFeed();
-      }
-      else if (action === 'interested') {
-        var intIds = JSON.parse(localStorage.getItem('onechat_interested') || '[]');
-        if (!intIds.includes(String(p.id))) {
-          intIds.push(String(p.id));
-          localStorage.setItem('onechat_interested', JSON.stringify(intIds));
-        }
-        showToast('Marked as Interested 🔥');
-        await loadFeed();
-      }
-      else if (action === 'not-interested') {
-        var notIds = JSON.parse(localStorage.getItem('onechat_not_interested') || '[]');
-        if (!notIds.includes(String(p.id))) {
-          notIds.push(String(p.id));
-          localStorage.setItem('onechat_not_interested', JSON.stringify(notIds));
-        }
-        showToast('Post hidden');
-        await loadFeed();
-      }
-    };
+    feed.onclick = function(e) { handlePostClick(e, posts); };
   }
 
   async function toggleLike(p, btn) {
@@ -1919,8 +1933,11 @@
       await addXP(currentUser.username, 1);
       await addXP(p.username, 2);
     }
-    btn.classList.toggle('liked', p.liked);
-    btn.querySelector('.like-count').textContent = p.likesCount;
+    if (btn) {
+      btn.classList.toggle('liked', p.liked);
+      var countSpan = btn.querySelector('.like-count');
+      if (countSpan) countSpan.textContent = p.likesCount;
+    }
   }
 
   // ============ COMMENTS ============
@@ -1949,6 +1966,15 @@
     replyBanner.classList.remove('visible');
   }
 
+  document.querySelectorAll('.sort-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.sort-btn').forEach(function(b) { b.classList.remove('active'); });
+      this.classList.add('active');
+      currentCommentSort = this.dataset.sort;
+      if (currentPost) renderComments(currentPost);
+    });
+  });
+
   async function renderComments(p) {
     commentsList.innerHTML = '';
     if (!p._comments || p._comments.length === 0) {
@@ -1958,10 +1984,33 @@
     var parents = p._comments.filter(function(c) { return !c.parent_id; });
     var replies = p._comments.filter(function(c) { return c.parent_id; });
     
+    // Find Top Fan
+    var fanCounts = {};
+    p._comments.forEach(function(c) {
+      if (c.username !== p.username) {
+        fanCounts[c.username] = (fanCounts[c.username] || 0) + 1;
+      }
+    });
+    var max = 0;
+    var topFan = null;
+    for (var u in fanCounts) {
+      if (fanCounts[u] > max) { max = fanCounts[u]; topFan = u; }
+    }
+
+    // Sorting Logic
     parents.sort(function(a, b) {
-      if (a.is_pinned && !b.is_pinned) return -1;
-      if (!a.is_pinned && b.is_pinned) return 1;
-      return new Date(a.created_at) - new Date(b.created_at);
+      if (currentCommentSort === 'relevant') {
+        if (a.is_pinned && !b.is_pinned) return -1;
+        if (!a.is_pinned && b.is_pinned) return 1;
+        return (b.likesCount || 0) - (a.likesCount || 0);
+      } else if (currentCommentSort === 'new') {
+        return new Date(b.created_at) - new Date(a.created_at);
+      } else if (currentCommentSort === 'old') {
+        return new Date(a.created_at) - new Date(b.created_at);
+      } else if (currentCommentSort === 'popular') {
+        return (b.likesCount || 0) - (a.likesCount || 0);
+      }
+      return 0;
     });
 
     var commenterNames = {}; p._comments.forEach(function(c) { commenterNames[c.username] = true; });
@@ -1978,6 +2027,10 @@
       
       var authorBadge = '';
       if (isMine) authorBadge = '<span class="badge-tag badge-author">Author</span>'; 
+      
+      // ADDED TOP FAN BADGE
+      var topFanBadge = '';
+      if (c.username === topFan) topFanBadge = '<span class="badge-tag badge-top-fan">⭐ Top Fan</span>';
       
       var pinBtn = '';
       if (isPostAuthor) {
@@ -1997,7 +2050,7 @@
       el.innerHTML =
         '<div class="comment-avatar">' + (map[c.username] || '♥️') + '</div>' +
         '<div class="comment-body">' +
-          '<div class="comment-username">' + escapeHtml(c.username) + replyToHtml + authorBadge + '</div>' +
+          '<div class="comment-username">' + escapeHtml(c.username) + replyToHtml + authorBadge + topFanBadge + '</div>' +
           '<div class="comment-text">' + renderFormatted(c.text) + '</div>' +
           '<div class="comment-meta">' +
             '<span>' + timeAgo(c.created_at) + '</span>' +
@@ -2025,6 +2078,9 @@
         }
         this.classList.toggle('liked', cc.liked);
         this.querySelector('.cl-count').textContent = cc.likesCount;
+        if (currentCommentSort === 'popular' || currentCommentSort === 'relevant') {
+          renderComments(p); // Re-sort
+        }
       });
 
       el.querySelector('.comment-reply-btn').addEventListener('click', function() {
@@ -2347,7 +2403,6 @@
       var p = res.data || { emoji: '♥️' };
       profileEmoji.textContent = p.emoji;
       profileRealName.textContent = p.name || '';
-      // REMOVED GENDER EMOJI - Just show country (and gender text without symbol)
       var metaParts = [];
       if (p.country) metaParts.push(p.country);
       if (p.gender) metaParts.push(p.gender);
@@ -2404,15 +2459,66 @@
       });
     }
     
-    supabase.from('posts').select('*').eq('username', username).order('created_at', { ascending: false }).limit(20).then(function(res) {
-      var posts = res.data || [];
-      var html = '';
-      posts.forEach(function(p) {
-        var bgStyle = p.bg_color ? 'style="background-color:' + p.bg_color + ';"' : '';
-        html += '<div class="post"><div class="post-body"><div class="post-bg" ' + bgStyle + '><div class="post-text">' + renderFormatted(p.text) + '</div></div></div></div>';
-      });
-      profilePosts.innerHTML = html || '<div class="empty-feed">No posts</div>';
+    // Fetch posts and render them EXACTLY like the main feed
+    var postsRes = await supabase.from('posts').select('*').eq('username', username).order('created_at', { ascending: false }).limit(50);
+    var posts = postsRes.data || [];
+    
+    // Sort pinned first
+    posts.sort(function(a, b) {
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+      return new Date(b.created_at) - new Date(a.created_at);
     });
+
+    // Get the profile emoji for the avatar
+    var profRes2 = await supabase.from('profiles').select('emoji').eq('username', username).maybeSingle();
+    var pEmoji = profRes2.data ? profRes2.data.emoji : '♥️';
+    
+    // Get current user's follow list to show correct button state
+    var meFollowRes = await supabase.from('follows').select('following').eq('follower', currentUser.username);
+    var iFollowSet = new Set((meFollowRes.data || []).map(function(f) { return f.following; }));
+
+    for (var i = 0; i < posts.length; i++) {
+      var p = posts[i];
+      p._avatar = pEmoji;
+      p._isFollowing = iFollowSet.has(p.username);
+      
+      // Fetch likes
+      var likesRes = await supabase.from('post_likes').select('username').eq('post_id', p.id);
+      p._likes = likesRes.data || [];
+      p.liked = p._likes.some(function(l) { return l.username === currentUser.username; });
+      p.likesCount = p._likes.length;
+      
+      // Fetch comments
+      var commentsRes = await supabase.from('post_comments').select('*').eq('post_id', p.id).order('created_at', { ascending: true });
+      p._comments = commentsRes.data || [];
+      
+      if (p._comments.length > 0) {
+        var commentIds = p._comments.map(function(c) { return c.id; });
+        var cLikesRes = await supabase.from('comment_likes').select('comment_id, username').in('comment_id', commentIds);
+        var cLikes = cLikesRes.data || [];
+        p._comments.forEach(function(c) {
+          var mine = cLikes.filter(function(cl) { return cl.comment_id === c.id; });
+          c.likesCount = mine.length;
+          c.liked = mine.some(function(cl) { return cl.username === currentUser.username; });
+        });
+      }
+    }
+    
+    profilePosts.innerHTML = '';
+    if (posts.length === 0) {
+      profilePosts.innerHTML = '<div class="empty-feed">No posts</div>';
+    } else {
+      posts.forEach(function(p) {
+        var el = document.createElement('div');
+        el.className = 'post' + (isInterested(p.id) ? ' interested' : '');
+        el.dataset.postId = p.id;
+        el.innerHTML = createPostHTML(p, p.username === currentUser.username);
+        profilePosts.appendChild(el);
+      });
+      
+      profilePosts.onclick = function(e) { handlePostClick(e, posts); };
+    }
   }
 
   // ============ DELETE ACCOUNT ============
