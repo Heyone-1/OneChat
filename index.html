@@ -131,7 +131,27 @@
   
   /* Post Background Styling */
   .post-bg { border-radius:12px; padding:16px; margin:8px 0; }
+  
+  /* Colored Square Post Layout */
+  .post-bg.colored-bg { 
+    aspect-ratio: 1 / 1; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    text-align: center; 
+    padding: 24px; 
+    overflow: hidden;
+  }
+  
   .post-text { font-size:15px; line-height:1.45; color:var(--text); word-wrap:break-word; white-space:pre-wrap; margin-bottom:0; margin-top:0; }
+  
+  /* Colored text sizing inside the square */
+  .post-bg.colored-bg .post-text { 
+    font-size: 24px; 
+    font-weight: 600; 
+    white-space: pre-wrap; 
+    word-break: break-word;
+  }
   
   /* Tag styles */
   .tag-text { color:var(--blue); font-weight:600; text-decoration:none; }
@@ -148,6 +168,7 @@
   .post-action { background:none; border:none; color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; padding:2px 0; transition:color .15s; }
   .post-action:active { transform:scale(.95); }
   .post-action.liked { color:var(--red); }
+  .post-action.views { cursor:default; }
   
   /* 3 Dots Menu */
   .post-menu-btn { background:none; border:none; color:var(--muted); cursor:pointer; padding:4px; display:flex; align-items:center; margin-left:auto; font-size:18px; font-weight:bold; letter-spacing:1px; line-height:1; }
@@ -246,7 +267,7 @@
   .dashboard-rank { font-size:14px; font-weight:700; margin-top:12px; color:var(--purple); }
   
   .dash-stats { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:16px; }
-  .dash-card { background:var(--surface-2); border:1px solid var(--border); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:4px; }
+  .dash-card { background:var(--surface-2); border:1px solid var(--border); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:4px; text-align:center; }
   .dash-card .val { font-size:22px; font-weight:800; }
   .dash-card .lbl { font-size:12px; color:var(--muted); font-weight:600; }
 
@@ -634,9 +655,14 @@
     
     <div class="dash-stats">
       <div class="dash-card"><span class="val" id="dashPosts">0</span><span class="lbl">Posts</span></div>
+      <div class="dash-card"><span class="val" id="dashViews">0</span><span class="lbl">Views</span></div>
       <div class="dash-card"><span class="val" id="dashLikes">0</span><span class="lbl">Likes Given</span></div>
       <div class="dash-card"><span class="val" id="dashComments">0</span><span class="lbl">Comments</span></div>
       <div class="dash-card"><span class="val" id="dashFollowers">0</span><span class="lbl">Followers</span></div>
+      <div class="dash-card" style="background:rgba(245,158,11,0.1); border-color:rgba(245,158,11,0.3);">
+        <span class="val" id="dashRankNum" style="color:var(--gold);">#-</span>
+        <span class="lbl" style="color:var(--gold);">Top 50 Rank</span>
+      </div>
     </div>
     
     <div class="dash-top-fans">
@@ -667,13 +693,23 @@
       <h2 style="margin-top:30px;">Frequently Asked Questions</h2>
       
       <div class="faq-item">
-        <div class="faq-q">How do I earn XP? <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
-        <div class="faq-a">You earn XP for posting (+5), commenting (+3), liking (+1), following someone (+2), and getting followed (+5).</div>
+        <div class="faq-q">How do I earn XP and climb the ranks? <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <div class="faq-a">You earn XP for posting (+5), commenting (+3), liking (+1), sending messages (+1), following someone (+2), and getting followed (+5). Your rank is calculated globally against all other users. Check your Dashboard to see your Top 50 Rank!</div>
       </div>
       
       <div class="faq-item">
         <div class="faq-q">What is a "Top Fan"? <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
         <div class="faq-a">A Top Fan is the user who has commented the most times on a specific post. They get a purple badge in the comments and are highlighted below the post.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">What do the message checkmarks mean? <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <div class="faq-a">A single grey check (✓) means the message was Sent. Double grey checks (✓✓) mean it was Delivered. Double green checks (✓✓) mean the recipient has seen and read your message.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">How do I create a colored square post? <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <div class="faq-a">When creating a post, select one of the colored circles in the toolbar. Your post will automatically transform into a large, centered square block with your text inside.</div>
       </div>
       
       <div class="faq-item">
@@ -928,9 +964,11 @@
   var dashXP = document.getElementById('dashXP');
   var dashRank = document.getElementById('dashRank');
   var dashPosts = document.getElementById('dashPosts');
+  var dashViews = document.getElementById('dashViews');
   var dashLikes = document.getElementById('dashLikes');
   var dashComments = document.getElementById('dashComments');
   var dashFollowers = document.getElementById('dashFollowers');
+  var dashRankNum = document.getElementById('dashRankNum');
   var dashTopFans = document.getElementById('dashTopFans');
 
   var guidelinesPage = document.getElementById('guidelinesPage');
@@ -1001,7 +1039,7 @@
   
   var isTagging = false;
   var tagQuery = '';
-  var currentCommentSort = 'relevant'; // 'relevant', 'new', 'old', 'popular'
+  var currentCommentSort = 'relevant';
   
   var currentChatUser = null;
   var currentConversationId = null;
@@ -1025,7 +1063,6 @@
   // ---------- HELPERS ----------
   function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
-  // Sanitizer
   function renderFormatted(html) {
     if (!html) return '';
     var t = document.createElement('template');
@@ -1729,6 +1766,12 @@
       p._avatar = (profileMap[p.username] && profileMap[p.username].emoji) || '♥️';
       p._isFollowing = iFollowSet.has(p.username);
       
+      // INCREMENT VIEW COUNT (Only if not the owner)
+      if (p.username !== currentUser.username) {
+        await supabase.from('posts').update({ views: (p.views || 0) + 1 }).eq('id', p.id);
+        p.views = (p.views || 0) + 1;
+      }
+      
       var likesRes = await supabase.from('post_likes').select('username').eq('post_id', p.id);
       p._likes = likesRes.data || [];
       p.liked = p._likes.some(function(l) { return l.username === currentUser.username; });
@@ -1771,6 +1814,7 @@
     if (p.is_pinned) authorBadge += ' <span class="badge-tag badge-pin">Pinned</span>';
     if (isInterested(p.id)) authorBadge += ' <span class="badge-tag badge-interested">🔥 Interested</span>';
 
+    var bgClass = p.bg_color ? 'colored-bg' : '';
     var bgStyle = p.bg_color ? 'style="background-color:' + p.bg_color + ';"' : '';
 
     // Find Top Fan
@@ -1807,7 +1851,7 @@
             '<button class="dropdown-item" data-action="not-interested" data-id="' + p.id + '">Not interested</button>' +
           '</div>' +
         '</div>' +
-        '<div class="post-bg" ' + bgStyle + '>' +
+        '<div class="post-bg ' + bgClass + '" ' + bgStyle + '>' +
           '<div class="post-text">' + renderFormatted(p.text) + '</div>' +
         '</div>' +
         '<div class="post-actions">' +
@@ -1817,6 +1861,9 @@
           '<button class="post-action comment-btn" data-action="comment" data-id="' + p.id + '">' +
             '💬 <span class="comment-count">' + p._comments.length + '</span>' +
           '</button>' +
+          '<div class="post-action views">' +
+            '👁️ <span>' + (p.views || 0) + '</span>' +
+          '</div>' +
         '</div>' +
         (topFan ? '<div style="font-size:11px;color:var(--purple);font-weight:700;margin-top:6px;">⭐ Top Fan: @' + escapeHtml(topFan) + '</div>' : '');
   }
@@ -2199,7 +2246,8 @@
     var result = await supabase.from('posts').insert({ 
       username: currentUser.username, 
       text: htmlText,
-      bg_color: currentBgColor
+      bg_color: currentBgColor,
+      views: 0
     }).select().single();
     
     if (result.error) { showToast('Could not post', true); postBtn.classList.add('active'); postBtn.textContent = 'Post'; return; }
@@ -2328,7 +2376,10 @@
       dashXP.textContent = xp;
       dashRank.textContent = getRank(xp);
 
-      var postsRes = await supabase.from('posts').select('id', { count: 'exact', head: true }).eq('username', currentUser.username);
+      var postsRes = await supabase.from('posts').select('id, views', { count: 'exact' }).eq('username', currentUser.username);
+      var totalViews = 0;
+      (postsRes.data || []).forEach(function(p) { totalViews += (p.views || 0); });
+      
       var likesRes = await supabase.from('post_likes').select('id', { count: 'exact', head: true }).eq('username', currentUser.username);
       var commentsRes = await supabase.from('post_comments').select('id', { count: 'exact', head: true }).eq('username', currentUser.username);
       
@@ -2336,9 +2387,24 @@
       var myFollowers = (allF.data || []).filter(function(f) { return f.following === currentUser.username; }).length;
 
       dashPosts.textContent = postsRes.count || 0;
+      dashViews.textContent = totalViews;
       dashLikes.textContent = likesRes.count || 0;
       dashComments.textContent = commentsRes.count || 0;
       dashFollowers.textContent = myFollowers;
+
+      // Fetch All XP for Rank calculation
+      var allXpRes = await supabase.from('xp').select('username, points').order('points', { ascending: false });
+      var allXp = allXpRes.data || [];
+      
+      // Find user's rank
+      var userRank = allXp.findIndex(function(x) { return x.username === currentUser.username; });
+      if (userRank !== -1 && userRank < 50) {
+        dashRankNum.textContent = '#' + (userRank + 1);
+      } else if (userRank !== -1) {
+        dashRankNum.textContent = '#' + (userRank + 1); // Show actual rank even if >50
+      } else {
+        dashRankNum.textContent = '#-';
+      }
 
       // Top Fans
       var myPosts = await supabase.from('posts').select('id').eq('username', currentUser.username);
