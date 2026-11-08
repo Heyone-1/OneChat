@@ -310,6 +310,7 @@
   .user-row .realname { font-size:12px; color:var(--muted); }
   .user-row .follow-btn-sm { background:var(--blue); color:white; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; flex-shrink:0; }
   .user-row .follow-btn-sm.following { background:none; border:1px solid var(--border); color:var(--text); }
+  .user-row .follow-btn-sm:disabled { opacity:.5; cursor:not-allowed; }
   .empty-list { padding:40px 20px; text-align:center; color:var(--muted); font-size:14px; }
 
   /* ===== Comments Sheet ===== */
@@ -1125,10 +1126,13 @@
   confirmBackdrop.addEventListener('click', function(e) { if (e.target === confirmBackdrop) closeConfirm(); });
   confirmOk.addEventListener('click', function() { var cb = confirmCallback; closeConfirm(); if (cb) cb(); });
 
+  // ============ FETCH USERS (always fresh) ============
   async function fetchAllUsers() {
-    if(!supabase) return;
-    var res = await supabase.from('profiles').select('username, emoji');
-    if (res.data) allUsersCache = res.data;
+    if (!supabase) return [];
+    var res = await supabase.from('profiles').select('username, emoji, name');
+    if (res.error) { console.error('fetchAllUsers error:', res.error); return allUsersCache; }
+    allUsersCache = res.data || [];
+    return allUsersCache;
   }
 
   COUNTRIES.forEach(function(c) {
@@ -1151,13 +1155,13 @@
     var res = await supabase.from('presence').select('last_seen').eq('username', username).maybeSingle();
     if (!res.data) return false;
     var diff = (Date.now() - new Date(res.data.last_seen).getTime()) / 1000;
-    return diff < 120; // Online if active in last 2 minutes
+    return diff < 120;
   }
 
   function setupPresence() {
     updatePresence();
     if (presenceInterval) clearInterval(presenceInterval);
-    presenceInterval = setInterval(updatePresence, 60000); // Update every minute
+    presenceInterval = setInterval(updatePresence, 60000);
   }
 
   // ============ XP & RANKS ============
@@ -1185,24 +1189,49 @@
     return res.data ? res.data.points : 0;
   }
 
-  // ============ FOLLOW LOGIC (Bulletproof fetch) ============
+  // ============ FOLLOW LOGIC (bulletproof) ============
   async function isFollowing(target) {
-    if (!supabase || !currentUser) return false;
-    var res = await supabase.from('follows').select('id').eq('follower', currentUser.username).eq('following', target).maybeSingle();
-    return !!res.data;
+    if (!supabase || !currentUser || target === currentUser.username) return false;
+    var res = await supabase.from('follows')
+      .select('id')
+      .eq('follower', currentUser.username)
+      .eq('following', target)
+      .limit(1);
+    if (res.error) { console.error('isFollowing error:', res.error); return false; }
+    return !!(res.data && res.data.length > 0);
   }
 
   async function toggleFollow(target, btn) {
-    if (!supabase || !currentUser || target === currentUser.username) return;
-    var check = await supabase.from('follows').select('id').eq('follower', currentUser.username).eq('following', target).maybeSingle();
-    if (check.data) {
-      await supabase.from('follows').delete().eq('id', check.data.id);
+    if (!supabase || !currentUser || target === currentUser.username) return false;
+    var res = await supabase.from('follows')
+      .select('id')
+      .eq('follower', currentUser.username)
+      .eq('following', target)
+      .limit(1);
+
+    if (res.error) { showToast('Follow check failed: ' + res.error.message, true); return false; }
+    var existing = res.data && res.data[0];
+
+    if (existing) {
+      var del = await supabase.from('follows').delete().eq('id', existing.id);
+      if (del.error) { showToast('Unfollow failed: ' + del.error.message, true); return true; }
       if (btn) { btn.textContent = 'Follow'; btn.classList.remove('following'); }
+      return false;
     } else {
-      await supabase.from('follows').insert({ follower: currentUser.username, following: target });
+      var ins = await supabase.from('follows').insert({
+        follower: currentUser.username,
+        following: target
+      });
+      if (ins.error) {
+        console.error('Follow insert error:', ins.error);
+        showToast('Follow failed: ' + ins.error.message, true);
+        return false;
+      }
       if (btn) { btn.textContent = 'Following'; btn.classList.add('following'); }
       await addXP(target, 5);
       await addXP(currentUser.username, 2);
+      await createNotification(target, 'follow', null);
+      return true;
     }
   }
 
@@ -1211,37 +1240,54 @@
     if (!supabase) return;
     listTitle.textContent = type === 'followers' ? 'Followers' : 'Following';
     userList.innerHTML = '<div class="empty-list">Loading...</div>';
-    listBackdrop.classList.add('open'); listSheet.classList.add('open');
+    listBackdrop.classList.add('open');
+    listSheet.classList.add('open');
 
-    // Fetch ALL follows to avoid query issues, then filter in JS
-    var allRes = await supabase.from('follows').select('*');
-    var allFollows = allRes.data || [];
-    
-    var rows = [];
-    if (type === 'followers') {
-      rows = allFollows.filter(function(f) { return f.following === username; }).map(function(f) { return f.follower; });
-    } else {
-      rows = allFollows.filter(function(f) { return f.follower === username; }).map(function(f) { return f.following; });
+    var allRes = await supabase.from('follows').select('follower, following');
+    if (allRes.error) {
+      console.error('openFollowList error:', allRes.error);
+      userList.innerHTML = '<div class="empty-list">Could not load list</div>';
+      return;
     }
+    var allFollows = allRes.data || [];
 
-    // Remove duplicates just in case
-    rows = rows.filter(function(item, pos) { return rows.indexOf(item) === pos; });
+    var rows = type === 'followers'
+      ? allFollows.filter(function(f) { return f.following === username; }).map(function(f) { return f.follower; })
+      : allFollows.filter(function(f) { return f.follower === username; }).map(function(f) { return f.following; });
+
+    // dedupe
+    rows = Array.from(new Set(rows));
 
     if (rows.length === 0) {
-      userList.innerHTML = '<div class="empty-list">' + (type === 'followers' ? 'No followers yet' : 'Not following anyone yet') + '</div>';
+      userList.innerHTML = '<div class="empty-list">' +
+        (type === 'followers' ? 'No followers yet' : 'Not following anyone yet') +
+        '</div>';
       return;
     }
 
+    // fetch profiles
     var profRes = await supabase.from('profiles').select('username, emoji, name').in('username', rows);
-    var map = {}; (profRes.data || []).forEach(function(p) { map[p.username] = p; });
+    var map = {};
+    (profRes.data || []).forEach(function(p) { map[p.username] = p; });
+
+    // which of these do I follow?
+    var meFollowRes = await supabase.from('follows').select('following').eq('follower', currentUser.username);
+    var iFollowSet = new Set((meFollowRes.data || []).map(function(f) { return f.following; }));
+
+    // presence in one shot
+    var presenceRes = await supabase.from('presence').select('username, last_seen').in('username', rows);
+    var onlineSet = new Set();
+    var now = Date.now();
+    (presenceRes.data || []).forEach(function(p) {
+      if ((now - new Date(p.last_seen).getTime()) / 1000 < 120) onlineSet.add(p.username);
+    });
 
     userList.innerHTML = '';
-    for (var i = 0; i < rows.length; i++) {
-      var uname = rows[i];
-      var prof = map[uname] || { emoji: '♥️' };
+    rows.forEach(function(uname) {
+      var prof = map[uname] || { emoji: '♥️', name: '' };
       var isMe = uname === currentUser.username;
-      var isF = await isFollowing(uname);
-      var online = await isUserOnline(uname);
+      var isF = iFollowSet.has(uname);
+      var online = onlineSet.has(uname);
 
       var row = document.createElement('div');
       row.className = 'user-row';
@@ -1256,24 +1302,26 @@
         '</div>' +
         (isMe ? '' : '<button class="follow-btn-sm' + (isF ? ' following' : '') + '">' + (isF ? 'Following' : 'Follow') + '</button>');
 
-      row.addEventListener('click', function(uname) {
-        return function(e) {
-          if (e.target.closest('.follow-btn-sm')) return;
-          closeFollowList();
-          openProfile(uname);
-        };
-      }(uname));
+      row.addEventListener('click', function(e) {
+        if (e.target.closest('.follow-btn-sm')) return;
+        closeFollowList();
+        setTimeout(function() { openProfile(uname); }, 50);
+      });
 
       var fb = row.querySelector('.follow-btn-sm');
       if (fb) {
         fb.addEventListener('click', async function(e) {
           e.stopPropagation();
-          await toggleFollow(uname, this);
+          fb.disabled = true;
+          var followed = await toggleFollow(uname, fb);
+          fb.disabled = false;
+          fb.textContent = followed ? 'Following' : 'Follow';
+          fb.classList.toggle('following', followed);
         });
       }
 
       userList.appendChild(row);
-    }
+    });
   }
 
   function closeFollowList() {
@@ -1284,10 +1332,12 @@
   listBackdrop.addEventListener('click', closeFollowList);
 
   statFollowers.addEventListener('click', function() {
-    if (viewingProfile) openFollowList(viewingProfile, 'followers');
+    var uname = viewingProfile || (currentUser && currentUser.username);
+    if (uname) openFollowList(uname, 'followers');
   });
   statFollowing.addEventListener('click', function() {
-    if (viewingProfile) openFollowList(viewingProfile, 'following');
+    var uname = viewingProfile || (currentUser && currentUser.username);
+    if (uname) openFollowList(uname, 'following');
   });
 
   // ============ CONVERSATIONS ============
@@ -1420,11 +1470,119 @@
   messagesBack.addEventListener('click', function() { messagesPage.classList.remove('open'); });
   messagesBtn.addEventListener('click', loadConversations);
 
+  // ============ SEARCH ============
+  var searchTimer = null;
+  async function runSearch(query) {
+    query = (query || '').trim().toLowerCase();
+    if (!supabase) { searchBody.innerHTML = '<div class="search-empty">Not connected</div>'; return; }
+
+    if (!query) {
+      searchBody.innerHTML = '<div class="search-empty">Search for people or posts</div>';
+      return;
+    }
+
+    searchBody.innerHTML = '<div class="search-empty">Searching...</div>';
+
+    var users = await fetchAllUsers();
+
+    var people = users.filter(function(u) {
+      if (!u || !u.username) return false;
+      var matchName = u.username.toLowerCase().indexOf(query) !== -1;
+      var matchReal = u.name && u.name.toLowerCase().indexOf(query) !== -1;
+      return matchName || matchReal;
+    }).slice(0, 20);
+
+    var postsRes = await supabase.from('posts')
+      .select('id, username, text, created_at')
+      .ilike('text', '%' + query + '%')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    var posts = (postsRes.data || []);
+
+    searchBody.innerHTML = '';
+
+    if (people.length === 0 && posts.length === 0) {
+      searchBody.innerHTML = '<div class="search-empty">No results for "' + escapeHtml(query) + '"</div>';
+      return;
+    }
+
+    if (people.length) {
+      var title = document.createElement('div');
+      title.className = 'search-section-title';
+      title.textContent = 'People';
+      searchBody.appendChild(title);
+
+      people.forEach(function(u) {
+        var row = document.createElement('div');
+        row.className = 'user-row';
+        row.innerHTML =
+          '<div class="avatar-wrap" style="width:44px;height:44px;">' +
+            '<div class="avatar">' + (u.emoji || '♥️') + '</div>' +
+          '</div>' +
+          '<div class="info">' +
+            '<div class="uname">' + escapeHtml(u.username) + '</div>' +
+            (u.name ? '<div class="realname">' + escapeHtml(u.name) + '</div>' : '') +
+          '</div>';
+        row.addEventListener('click', function() {
+          searchPage.classList.remove('open');
+          openProfile(u.username);
+        });
+        searchBody.appendChild(row);
+      });
+    }
+
+    if (posts.length) {
+      var ptitle = document.createElement('div');
+      ptitle.className = 'search-section-title';
+      ptitle.textContent = 'Posts';
+      searchBody.appendChild(ptitle);
+
+      var emojiMap = {};
+      users.forEach(function(u) { if (u) emojiMap[u.username] = u.emoji; });
+
+      posts.forEach(function(p) {
+        var row = document.createElement('div');
+        row.className = 'post';
+        row.style.cursor = 'pointer';
+        row.innerHTML =
+          '<div class="post-avatar">' + (emojiMap[p.username] || '♥️') + '</div>' +
+          '<div class="post-body">' +
+            '<div class="post-header">' +
+              '<span class="post-username">' + escapeHtml(p.username) + '</span>' +
+              '<span class="post-time">· ' + timeAgo(p.created_at) + '</span>' +
+            '</div>' +
+            '<div class="post-text">' + renderFormatted(p.text) + '</div>' +
+          '</div>';
+        row.addEventListener('click', function() {
+          searchPage.classList.remove('open');
+          loadFeed(p.id);
+        });
+        searchBody.appendChild(row);
+      });
+    }
+  }
+
+  searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimer);
+    var q = this.value;
+    searchTimer = setTimeout(function() { runSearch(q); }, 250);
+  });
+
+  searchBtn.addEventListener('click', function() {
+    searchPage.classList.add('open');
+    searchInput.value = '';
+    searchInput.focus();
+    runSearch('');
+    fetchAllUsers();
+  });
+
+  searchBack.addEventListener('click', function() { searchPage.classList.remove('open'); });
+
   // ============ POSTS ============
   async function loadFeed(targetPostId) {
     if (!supabase) return;
     var result = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(50);
-    if (result.error) return;
+    if (result.error) { console.error(result.error); return; }
     var posts = result.data || [];
     if (posts.length === 0) {
       feed.innerHTML = '<div class="empty-feed"><span class="big">💬</span><p>No posts yet</p></div>';
@@ -1852,6 +2010,7 @@
       if (n.type === 'like') text = '<b>' + escapeHtml(n.user_from) + '</b> liked your post';
       else if (n.type === 'comment') text = '<b>' + escapeHtml(n.user_from) + '</b> commented on your post';
       else if (n.type === 'reply') text = '<b>' + escapeHtml(n.user_from) + '</b> replied to your comment';
+      else if (n.type === 'follow') text = '<b>' + escapeHtml(n.user_from) + '</b> started following you';
       
       el.innerHTML =
         '<div class="avatar">' + (map[n.user_from] || '♥️') + '</div>' +
@@ -1869,6 +2028,8 @@
         notifPage.classList.remove('open');
         if (n.post_id) {
           await loadFeed(n.post_id);
+        } else {
+          openProfile(n.user_from);
         }
       });
       notifBody.appendChild(el);
@@ -1888,8 +2049,6 @@
 
   // ============ NAVIGATION ============
   userChip.addEventListener('click', function() { if (currentUser) openProfile(currentUser.username); });
-  searchBtn.addEventListener('click', function() { searchPage.classList.add('open'); searchInput.focus(); });
-  searchBack.addEventListener('click', function() { searchPage.classList.remove('open'); });
   settingsBtn.addEventListener('click', function() { settingsPage.classList.add('open'); });
   settingsBack.addEventListener('click', function() { settingsPage.classList.remove('open'); });
   profileBack.addEventListener('click', function() { profilePage.classList.remove('open'); viewingProfile = null; });
@@ -1930,7 +2089,6 @@
   async function openDashboard() {
     dashboardPage.classList.add('open');
     
-    // Fetch all data safely
     try {
       var xp = await getXP(currentUser.username);
       dashXP.textContent = xp;
@@ -1940,7 +2098,6 @@
       var likesRes = await supabase.from('post_likes').select('id', { count: 'exact', head: true }).eq('username', currentUser.username);
       var commentsRes = await supabase.from('post_comments').select('id', { count: 'exact', head: true }).eq('username', currentUser.username);
       
-      // Use the bulletproof method for followers
       var allF = await supabase.from('follows').select('following');
       var myFollowers = (allF.data || []).filter(function(f) { return f.following === currentUser.username; }).length;
 
@@ -2006,6 +2163,7 @@
     profileXPBadge.style.display = 'none';
     deleteAccountBtn.style.display = (username === currentUser.username) ? 'block' : 'none';
     profileActions.innerHTML = '';
+    profileYouBadge.innerHTML = (username === currentUser.username) ? '<span class="profile-you-badge">YOU</span>' : '';
     
     supabase.from('profiles').select('*').eq('username', username).maybeSingle().then(function(res) {
       var p = res.data || { emoji: '♥️' };
@@ -2022,7 +2180,6 @@
       profileXPBadge.textContent = '⭐ ' + xp + ' XP · ' + getRank(xp);
     });
 
-    // Bulletproof Followers/Following count
     var allRes = await supabase.from('follows').select('*');
     var allFollows = allRes.data || [];
     var followers = allFollows.filter(function(f) { return f.following === username; }).length;
@@ -2036,8 +2193,12 @@
       followBtn.className = 'profile-action-btn' + (isF ? ' outline' : '');
       followBtn.textContent = isF ? 'Following' : 'Follow';
       followBtn.addEventListener('click', async function() {
-        await toggleFollow(username, followBtn);
-        // Refresh counts after follow action
+        followBtn.disabled = true;
+        var followed = await toggleFollow(username, followBtn);
+        followBtn.disabled = false;
+        followBtn.textContent = followed ? 'Following' : 'Follow';
+        followBtn.classList.toggle('outline', followed);
+        // refresh counts
         var updateRes = await supabase.from('follows').select('*');
         var uAll = updateRes.data || [];
         numFollowers.textContent = uAll.filter(function(f) { return f.following === username; }).length;
@@ -2072,7 +2233,7 @@
     });
   }
 
-  // ============ AUTH INIT & SIGN OUT / DELETE ============
+  // ============ DELETE ACCOUNT ============
   async function deleteAccount() {
     if (!supabase || !currentUser) return;
     var username = currentUser.username;
@@ -2108,6 +2269,11 @@
       currentUser = null;
       location.reload();
     });
+  });
+
+  settingsViewProfileBtn.addEventListener('click', function() {
+    settingsPage.classList.remove('open');
+    if (currentUser) openProfile(currentUser.username);
   });
 
   function finishAuth() {
@@ -2179,7 +2345,7 @@
   });
 
   // ============ TAGGING ============
-  function handleTagInput(e, inputType, popupEl) {
+  async function handleTagInput(e, inputType, popupEl) {
     var text, selectionStart;
     if (inputType === 'compose') {
       text = composeInput.innerText || '';
@@ -2195,6 +2361,7 @@
     if (match) {
       isTagging = true;
       tagQuery = match[1].toLowerCase();
+      if (allUsersCache.length === 0) await fetchAllUsers();
       var filtered = allUsersCache.filter(function(u) {
         return u.username.toLowerCase().includes(tagQuery) && u.username !== currentUser.username;
       }).slice(0, 5);
@@ -2259,6 +2426,10 @@
   composeInput.addEventListener('click', function(e) { handleTagInput(e, 'compose', composeTagPopup); });
   commentInput.addEventListener('input', function(e) { updatePostCommentBtn(); handleTagInput(e, 'comment', commentTagPopup); });
   commentInput.addEventListener('click', function(e) { handleTagInput(e, 'comment', commentTagPopup); });
+
+  // ============ AVATAR VIEWER ============
+  closeViewer.addEventListener('click', function() { avatarViewer.classList.remove('open'); });
+  avatarViewer.addEventListener('click', function(e) { if (e.target === avatarViewer) avatarViewer.classList.remove('open'); });
 
   // INIT
   function init() {
